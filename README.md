@@ -1,4 +1,4 @@
-# SKYNovel
+# SKYNovel-2pixi8
 [![MIT License](https://img.shields.io/github/license/famibee/SKYNovel.svg)](https://github.com/famibee/SKYNovel/blob/master/LICENSE)
 ![platform](https://img.shields.io/badge/platform-windows%20%7C%20macos-lightgrey.svg)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/famibee/skynovel?color=brightgreen)
