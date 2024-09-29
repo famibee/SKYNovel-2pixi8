@@ -1,0 +1,7 @@
+# Visual Studio Code cache/options directory
+/.vscode/
+
+# Node.js Tools
+/node_modules/
+
+*.LICENSE.txt
