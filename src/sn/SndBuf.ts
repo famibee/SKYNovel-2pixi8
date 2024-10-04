@@ -14,20 +14,44 @@ import {HArg} from './Grammar';
 import {CmnTween} from './CmnTween';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Loader, LoaderResource} from 'pixi.js';
+import {Assets} from 'pixi.js';
 import {sound, Sound, Options, filters} from '@pixi/sound';
 import {Tween, remove} from '@tweenjs/tween.js'
 
-interface ISndBuf {
-	fn		: string;
+class SndInf {
+	loop	: boolean 	= false;
 	stt		: ISndState;
-	snd		: Sound;
-	loop	: boolean;
-	start_ms: number;
-	end_ms	: number;
-	ret_ms	: number;
-	pan		: number;
+
+	constructor(
+		public	readonly	fn		: string,
+		public	readonly	start_ms: number,
+		public	readonly	end_ms	: number,
+		public	readonly	ret_ms	: number,
+		public	readonly	pan		: number,
+							snd?	: Sound,
+	) {
+		this.stt = snd ?new SsPlaying :new SsLoading;
+		if (snd) this.addSnd(snd);
+	}
+	addSnd(snd: Sound) {
+		this.loop = snd.loop;
+	//	if (! this.loop) sound.add(this.fn, snd);	// 手動キャッシュすると単発連打で無音に
+
+		this.stt.onLoad(this);
+		if (this.pan !== 0) snd.filters = [new filters.StereoFilter(this.pan)];
+
+		this.volume = vol=> {snd.volume = vol}
+		this.tw = ()=> new Tween(snd);
+		this.stop = ()=> snd.stop();
+		this.destroy = ()=> snd.destroy();
+	}
+
+	volume(_vol: number) {}
+	tw(): Tween<Sound> | undefined {return undefined}
+	stop() {}
+	destroy() {}
 }
+
 
 let cfg	: Config;
 let val	: IVariable;
@@ -83,7 +107,7 @@ export class SndBuf {
 	}
 
 
-	#sb		: ISndBuf;
+	#sb		: SndInf;
 
 	#fn		= '';
 	get fn() {return this.#fn}
@@ -125,17 +149,15 @@ export class SndBuf {
 		val.setVal_Nochk('tmp', vn +'playing', true);
 		val.flush();
 
-		const snd = sound.find(fn);	// キャッシュにあるか
-		this.#sb = {
+		const snd = sound.exists(fn) ?sound.find(fn) :undefined;	// キャッシュにあるか
+		this.#sb = new SndInf(
 			fn,
-			stt		: snd ?new SsPlaying :new SsLoading,
-			snd,
-			loop,
 			start_ms,
 			end_ms,
-			ret_ms	: 0,
+			ret_ms,
 			pan,
-		};
+			snd,
+		);
 		// @pixi/sound用基本パラメータ
 		const o: Options = {
 			loop,
@@ -146,10 +168,7 @@ export class SndBuf {
 				if (e) {main.errScript(`Sound ロード失敗ですa fn:${fn} ${e}`, false); return}
 				if (! s2) return;
 
-				this.#sb.snd = s2;
-				this.#sb.stt.onLoad(this.#sb);
-				if (pan !== 0) s2.filters = [new filters.StereoFilter(pan)];
-			//	if (! o.loop) sound.add(fn, snd);	// 手動キャッシュすると単発連打で無音に
+				this.#sb.addSnd(s2);
 				hArg.fnc?.();
 			},
 		};
@@ -224,13 +243,11 @@ export class SndBuf {
 				const ab = snd.options.source;
 				if (! (ab instanceof ArrayBuffer)
 					|| ab.byteLength === 0) snd.play(o);
-				else {
-					this.#sb.snd = Sound.from({
+				else this.#sb.addSnd(Sound.from({
 					...o,
 					url		: snd.options.url,
 					source	: ab,
-				})}
-				if (pan !== 0) snd.filters = [new filters.StereoFilter(pan)];
+				}));
 			}
 			return false;
 		}
@@ -254,25 +271,20 @@ export class SndBuf {
 	};
 	#playseSub(fn: string, o: Options): void {
 		const url = cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SOUND);
-	//	const url = 'http://localhost:8080/prj/audio/title.{ogg,mp3}';
-		if (url.slice(-4) !== '.bin') {
+		if (! url.endsWith('.bin')) {
 			o.url = url;
 			Sound.from(o);
 			return;
 		}
 
-		(new Loader).add({name: fn, url, xhrType: LoaderResource.XHR_RESPONSE_TYPE.BUFFER,})
-		.use(async (res, next)=> {
+		Assets.add({alias: fn, src: url});
+		Assets.load(fn).then(async b=> {
 			try {
-				res.data = await sys.decAB(res.data);
+				o.source = <ArrayBuffer><unknown>(await sys.decAB(b));
+				Sound.from(o);
 			} catch (e) {
-				main.errScript(`Sound ロード失敗ですc fn:${res.name} ${e}`, false);
+				main.errScript(`Sound ロード失敗ですc fn:${fn} ${e}`, false);
 			}
-			next();
-		})
-		.load((_ldr, hRes)=> {	// このあと o.loaded() もコールされる
-			o.source = hRes[fn]?.data;
-			Sound.from(o);
 		});
 	}
 
@@ -292,7 +304,7 @@ export class SndBuf {
 
 
 // =================================================
-function stop2var(sb: ISndBuf, buf: string): void {
+function stop2var(sb: SndInf, buf: string): void {
 	if (sb.loop) SndBuf.delLoopPlay(buf);
 	else {
 		const vn = 'const.sn.sound.'+ buf +'.';
@@ -308,20 +320,20 @@ function stopfadese(tw: Tween<Sound>): void {tw.stop().end()}	// stop()とend()�
 
 
 interface ISndState {
-	onLoad(sb: ISndBuf)	: void;
-	stopse(sb: ISndBuf)	: void;
-	ws(sb: ISndBuf, hArg: HArg): boolean;
+	onLoad(sb: SndInf)	: void;
+	stopse(sb: SndInf)	: void;
+	ws(sb: SndInf, hArg: HArg): boolean;
 	onPlayEnd(buf: string)	: void;
-	fade(sb: ISndBuf, hArg: HArg): void;
-	wf(sb: ISndBuf, hArg: HArg): boolean;
+	fade(sb: SndInf, hArg: HArg): void;
+	wf(sb: SndInf, hArg: HArg): boolean;
 	compFade(buf: string)	: void;
-	stopfadese(sb: ISndBuf, hArg: HArg): void;
+	stopfadese(sb: SndInf, hArg: HArg): void;
 	isDestroy	: boolean;
 }
 
 class SsLoading implements ISndState {
-	onLoad(sb: ISndBuf)	{sb.stt = new SsPlaying}
-	stopse(sb: ISndBuf)	{sb.stt = new SsStop(sb, false)}
+	onLoad(sb: SndInf)	{sb.stt = new SsPlaying}
+	stopse(sb: SndInf)	{sb.stt = new SsStop(sb, false)}
 	ws =()=> false;
 	onPlayEnd() {}		// ok
 	fade() {}			// ok
@@ -333,8 +345,8 @@ class SsLoading implements ISndState {
 
 class SsPlaying implements ISndState {
 	onLoad() {}			// ok
-	stopse(sb: ISndBuf)	{sb.stt = new SsStop(sb)}
-	ws(sb: ISndBuf, hArg: HArg) {
+	stopse(sb: SndInf)	{sb.stt = new SsStop(sb)}
+	ws(sb: SndInf, hArg: HArg) {
 		if (sb.loop) return false;
 
 		const {buf = 'SE'} = hArg;
@@ -353,7 +365,7 @@ class SsPlaying implements ISndState {
 		return false;
 	}
 	onPlayEnd() {}		// ok
-	fade(sb: ISndBuf, hArg: HArg) {
+	fade(sb: SndInf, hArg: HArg) {
 		const {buf = 'SE'} = hArg;
 
 		const vn = 'const.sn.sound.'+ buf +'.';
@@ -369,13 +381,14 @@ class SsPlaying implements ISndState {
 		const time = argChk_Num(hArg, 'time', NaN);
 		const delay = argChk_Num(hArg, 'delay', 0);
 		if ((time === 0 && delay === 0) || evtMng.isSkipping) {
-			sb.snd.volume = vol;
+			sb.volume(vol);
 			sb.stt = stop ? new SsStop(sb) : new SsPlaying;
 			return;
 		}
 
 //console.log('fadese start from:%f to:%f', sb.snd.volume, vol);
-		const tw = new Tween(sb.snd);
+		const tw = sb.tw();
+		if (! tw) return;
 		CmnTween.setTwProp(tw, hArg)
 		.to({volume: vol}, time)
 		.onComplete(()=> {
@@ -395,7 +408,7 @@ class SsPlaying implements ISndState {
 
 class SsWaitingStop implements ISndState {
 	onLoad() {}			// ok
-	stopse(sb: ISndBuf)	{sb.stt = new SsStop(sb)}
+	stopse(sb: SndInf)	{sb.stt = new SsStop(sb)}
 	ws =()=> false;		// ok
 	onPlayEnd(buf: string)	{evtMng.breakEvent('buf:'+ buf)}
 	fade() {}			// ok
@@ -408,11 +421,11 @@ class SsWaitingStop implements ISndState {
 class SsFade implements ISndState {
 	constructor(readonly tw: Tween<Sound>) {}
 	onLoad() {}			// ok
-	stopse(sb: ISndBuf)	{stopfadese(this.tw); sb.stt = new SsStop(sb)}	// 順番厳守
+	stopse(sb: SndInf)	{stopfadese(this.tw); sb.stt = new SsStop(sb)}	// 順番厳守
 	ws =()=> false;		// ok ?
 	onPlayEnd() {}		// ok
 	fade() {}			// ok
-	wf(sb: ISndBuf, hArg: HArg) {
+	wf(sb: SndInf, hArg: HArg) {
 		const {buf = 'SE'} = hArg;
 		argChk_Boolean(hArg, 'canskip', false);	// waitEvent() のデフォルトと違うので先行上書き
 		if (evtMng.waitEvent('buf:'+ buf, hArg, ()=> stopfadese(this.tw))) {
@@ -430,7 +443,7 @@ class SsFade implements ISndState {
 class SsWaitingFade implements ISndState {
 	constructor(readonly tw: Tween<Sound>) {}
 	onLoad() {}			// ok
-	stopse(sb: ISndBuf)	{stopfadese(this.tw); sb.stt = new SsStop(sb)}
+	stopse(sb: SndInf)	{stopfadese(this.tw); sb.stt = new SsStop(sb)}
 	ws =()=> false;		// ok
 	onPlayEnd() {}		// ok
 	fade() {}			// ok
@@ -441,13 +454,13 @@ class SsWaitingFade implements ISndState {
 }
 
 class SsStop implements ISndState {
-	constructor(readonly sb: ISndBuf, readonly stop = true) {
+	constructor(readonly sb: SndInf, readonly stop = true) {
 		if (stop) {
-			sb.snd.stop();
+			sb.stop();
 			if (! sb.loop) return;
 
-			sb.snd.destroy();
-			sb.snd.destroy = ()=> {};	// 再度コール時エラー対策
+			sb.destroy();
+			sb.destroy = ()=> {};	// 再度コール時エラー対策
 		}
 	}	// destroy がないと再生が残るケースが。効果音だと破棄が激しいのでループモノ(BGM)だけにする
 	onLoad() {}			// ok

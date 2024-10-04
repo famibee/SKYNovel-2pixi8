@@ -7,8 +7,9 @@
 
 const [, , ...aCmd] = process.argv;
 const watch = aCmd.includes('--watch') ?{} :null;
+const web = aCmd.includes('--web') ?{} :null;
 
-import {build, InlineConfig} from 'vite';
+import {build} from 'vite';
 import dts, {PluginOptions} from 'vite-plugin-dts';
 import {resolve} from 'node:path';
 import {builtinModules} from 'node:module';
@@ -20,7 +21,7 @@ const oDts: PluginOptions = {
 };
 
 // === ブラウザ用 ===
-build(<InlineConfig>{
+build({
 	build: {
 		target		: 'esnext',
 		lib: {
@@ -33,13 +34,20 @@ build(<InlineConfig>{
 //		minify		: 'terser',
 		reportCompressedSize	: false,
 		watch,
+		rollupOptions: {
+			output: { // entry chunk assets それぞれの書き出し名の指定
+				entryFileNames: `[name].js`,
+				chunkFileNames: `[name].js`,
+				assetFileNames: `[name].[ext]`,
+			},
+		},
 	},
 	plugins: [dts(oDts)],
 });
-
+if (! web) {
 
 // === アプリ用 ===
-build(<InlineConfig>{
+build({
 	build: {
 		target		: 'esnext',
 		lib: {
@@ -56,12 +64,17 @@ build(<InlineConfig>{
 			external: [
 				...builtinModules.flatMap(p=> [p, `node:${p}`]),
 			],
+			output: { // entry chunk assets それぞれの書き出し名の指定
+				entryFileNames: `[name].js`,
+				chunkFileNames: `[name].js`,
+				assetFileNames: `[name].[ext]`,
+			},
 		},
 	},
 	plugins: [dts(oDts)],
 });
 
-build(<InlineConfig>{
+build({
 	build: {
 		target		: 'esnext',
 		lib: {
@@ -80,12 +93,17 @@ build(<InlineConfig>{
 				'electron-devtools-installer',
 				...builtinModules.flatMap(p=> [p, `node:${p}`]),
 			],
+			output: { // entry chunk assets それぞれの書き出し名の指定
+				entryFileNames: `[name].js`,
+				chunkFileNames: `[name].js`,
+				assetFileNames: `[name].[ext]`,
+			},
 		},
 	},
 	plugins: [dts(oDts)],
 });
 
-build(<InlineConfig>{
+build({
 	build: {
 		target		: 'esnext',
 		lib: {
@@ -103,7 +121,14 @@ build(<InlineConfig>{
 				'electron',
 				...builtinModules.flatMap(p=> [p, `node:${p}`]),
 			],
+			output: { // entry chunk assets それぞれの書き出し名の指定
+				entryFileNames: `[name].js`,
+				chunkFileNames: `[name].js`,
+				assetFileNames: `[name].[ext]`,
+			},
 		},
 	},
 	plugins: [dts(oDts)],
 });
+
+}

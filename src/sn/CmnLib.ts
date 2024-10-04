@@ -42,7 +42,7 @@ export function initStyle() {
 	for (let i=len -1; i>=0; --i) {
 		const v = he.children[i];
 		if (! (v instanceof HTMLStyleElement)) continue;
-		if (v.innerText.slice(0, 14) !== css_key4del) continue;
+		if (! v.innerText.startsWith(css_key4del)) continue;
 		he.removeChild(v);
 	}
 }
@@ -55,7 +55,7 @@ export function addStyle(style: string) {
 
 
 // =============== EventMng
-import {Container} from 'pixi.js';
+import {Color, Container} from 'pixi.js';
 export interface IEvtMng {
 	button(hArg: HArg, ctnBtn: Container, normal: ()=> void, hover: ()=> boolean, clicked: ()=> void): void;
 	unButton(em: Container): void;
@@ -79,7 +79,7 @@ export	function argChk_Num(hash: any, name: string, def: number): number {
 		return def;
 	}
 
-	const n = (String(v).slice(0, 2) === '0x')
+	const n = String(v).startsWith('0x')
 		? parseInt(v)
 		: parseFloat(v);
 	if (isNaN(n)) throw `[${hash[':タグ名']}]属性 ${name} の値【${v}】が数値ではありません`;
@@ -116,23 +116,11 @@ export	function argChk_Boolean(hash: any, name: string, def: boolean): boolean {
 }
 
 
-export function parseColor(v: string): number {
-	if (v.at(0) === '#') return parseInt(v.slice(1), 16);
-	const n = Number(v);
-	if (! isNaN(n)) return n;	// 0, 0xffffff
-
-	if (v === 'black') return 0;
-	CmnLib.cc4ColorName.fillStyle = v;
-	const cc = CmnLib.cc4ColorName.fillStyle;
-	if (cc === '#000000') throw `色名前 ${v} が異常です`;
-
-	return parseInt(cc.slice(1), 16);
-}
 export	function argChk_Color(hash: any, name: string, def: number): number {
 	const v = hash[name];
 	if (! v) return hash[name] = def;
 
-	return hash[name] = parseColor(String(v));
+	return hash[name] = new Color(v).toNumber();
 }
 
 
@@ -154,6 +142,7 @@ const REG_EXT	= /\.([^\.]+)$/;
 export 	function getExt(p: string) {return (p.match(REG_EXT) ?? ['',''])[1]}
 
 import {name, os} from 'platform';
+//import {isMobile} from 'pixi.js';		// 使い物にならないことを確認済み
 export class CmnLib {
 	static	stageW		= 0;
 	static	stageH		= 0;

@@ -15,17 +15,17 @@ import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {Main} from './Main';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Application, Loader, LoaderResource} from 'pixi.js';
+import {Application, Assets} from 'pixi.js';
 
 
 export class FrameMng implements IGetFrm {
 	static	#cfg	: Config;
 	static	#sys	: SysBase;
-	static	#main	: IMain;
-	static	init(cfg: Config, sys: SysBase, main: IMain): void {
+	// static	#main	: IMain;
+	static	init(cfg: Config, sys: SysBase, _main: IMain): void {
 		FrameMng.#cfg = cfg;
 		FrameMng.#sys = sys;
-		FrameMng.#main = main;
+		// FrameMng.#main = main;
 	}
 
 	constructor(hTag: IHTag, private readonly appPixi: Application, private readonly val: IVariable) {
@@ -81,28 +81,20 @@ export class FrameMng implements IGetFrm {
 
 		disableEvent();
 		const url = FrameMng.#cfg.searchPath(src, SEARCH_PATH_ARG_EXT.HTML);
-		const ld = (new Loader)
-		.add({name: src, url, xhrType: LoaderResource.XHR_RESPONSE_TYPE.TEXT});
-		if (FrameMng.#sys.crypto) ld.use(async (res, next)=> {
-			try {
-				res.data = await FrameMng.#sys.dec(res.extension, res.data);
-			} catch (e) {
-				FrameMng.#main.errScript(`[add_frame]Html ロード失敗です src:${res.name} ${e}`, false);
-			}
-			next();
-		});
-		ld.load((_ldr, hRes)=> {
+		Assets.load({src: url, loadParser: 'loadTxt'}).then(async d=> {
+			if (FrameMng.#sys.crypto) d = await FrameMng.#sys.dec(getExt(url), d);
+
 			const f = document.getElementById(id) as HTMLIFrameElement;
 			this.#hIfrm[id] = f;
 			this.#hDisabled[id] = false;
 
 			const path_parent = url.slice(0, url.lastIndexOf('/') +1);
 			const path_pa_pa = path_parent.slice(0, url.lastIndexOf('/') +1);
-			f.srcdoc = String(hRes[src]?.data)	// .src はふりーむで問題発生
+			f.srcdoc = String(d)	// .src はふりーむで問題発生
 			.replace('sn_repRes();', '')	// これはいずれやめる
 			.replaceAll(
 				/\s(?:src|href)=(["'])(\S+?)\1/g,	// 【\s】が大事、data-src弾く
-				(m, br, v)=> v.slice(0, 3) === '../'
+				(m, br, v)=> v.startsWith('../')
 				? m.replace('../', path_pa_pa)
 				: m.replace('./', '')	// 「./」は無視
 					.replace(br, br + path_parent)
@@ -135,6 +127,62 @@ export class FrameMng implements IGetFrm {
 			};
 		});
 
+/*
+		const ld = (new Loader)
+		.add({name: src, url, xhrType: LoaderResource.XHR_RESPONSE_TYPE.TEXT});
+		if (FrameMng.#sys.crypto) ld.use(async (res, next)=> {
+			try {
+				res.data = await FrameMng.#sys.dec(res.extension, res.data);
+			} catch (e) {
+				FrameMng.#main.errScript(`[add_frame]Html ロード失敗です src:${res.name} ${e}`, false);
+			}
+			next();
+		});
+		ld.load((_ldr, hRes)=> {
+			const f = document.getElementById(id) as HTMLIFrameElement;
+			this.#hIfrm[id] = f;
+			this.#hDisabled[id] = false;
+
+			const path_parent = url.slice(0, url.lastIndexOf('/') +1);
+			const path_pa_pa = path_parent.slice(0, url.lastIndexOf('/') +1);
+			f.srcdoc = String(hRes[src]?.data)	// .src はふりーむで問題発生
+			.replace('sn_repRes();', '')	// これはいずれやめる
+			.replaceAll(
+				/\s(?:src|href)=(["'])(\S+?)\1/g,	// 【\s】が大事、data-src弾く
+				(m, br, v)=> v.startsWith('../')
+				? m.replace('../', path_pa_pa)
+				: m.replace('./', '')	// 「./」は無視
+					.replace(br, br + path_parent)
+			);
+			
+			if (f.srcdoc.indexOf('true/ *WEBP* /;') >= 0) f.srcdoc = f.srcdoc.replaceAll(
+				/data-src="(.+?\.)(?:jpe?g|png)/g,
+				(_, p1)=> `data-src="${p1}webp`
+			);
+
+			f.onload = ()=> {	// 一度変数に入れてここで設定するのはFirefox対応。ifrm.onloadが二度呼ばれる！
+				// 組み込み変数
+				this.val.setVal_Nochk('tmp', vn, true);
+				this.val.setVal_Nochk('tmp', vn +'.alpha', a);
+				this.val.setVal_Nochk('tmp', vn +'.x', rct.x);
+				this.val.setVal_Nochk('tmp', vn +'.y', rct.y);
+				this.val.setVal_Nochk('tmp', vn +'.scale_x', sx);
+				this.val.setVal_Nochk('tmp', vn +'.scale_y', sy);
+				this.val.setVal_Nochk('tmp', vn +'.rotate', r);
+				this.val.setVal_Nochk('tmp', vn +'.width', rct.width);
+				this.val.setVal_Nochk('tmp', vn +'.height', rct.height);
+				this.val.setVal_Nochk('tmp', vn +'.visible', v);
+
+				const win = f.contentWindow!;
+				this.#evtMng.resvFlameEvent(win);
+				// sn_repRes()をコール。引数は画像ロード処理差し替えメソッド
+				((win as any).sn_repRes)?.((i: HTMLImageElement)=> FrameMng.#loadPic2Img(i.dataset.src ?? '', i));
+
+				enableEvent();
+			};
+		});
+*/
+
 		return true;
 	}
 	#hDisabled	: {[id: string]: boolean}	= {};
@@ -151,7 +199,7 @@ export class FrameMng implements IGetFrm {
 	}
 
 	static	#REG_REP_PRM = /\?([^?]+)$/;	// https://regex101.com/r/ZUnoFq/1
-	static	#loadPic2Img(src: string, img: HTMLImageElement, onload?: (img2: HTMLImageElement)=> void) {
+	static	#loadPic2Img(src: string, img: HTMLImageElement, _onload?: (img2: HTMLImageElement)=> void) {
 		const oUrl = this.#hEncImgOUrl[src];
 		if (oUrl) {img.src = oUrl; return}
 
@@ -160,8 +208,14 @@ export class FrameMng implements IGetFrm {
 		this.#hAEncImg[src] = [img];
 
 		const srcNoPrm = src.replace(FrameMng.#REG_REP_PRM, '');
-		const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
+	// TODO: 暗号化イメージ未テスト
+	//	const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
 		const url2 = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
+		Assets.load(url2).then(async _d=> {
+			// TODO: 後回し
+		});
+
+/*	// TODO: 暗号化イメージ未テスト
 		const ld2 = (new Loader)
 		.add({name: src, url: url2, xhrType: LoaderResource.XHR_RESPONSE_TYPE.BUFFER,});
 		if (FrameMng.#sys.crypto && getExt(url2) === 'bin') ld2.use(async (res, next)=> {
@@ -179,7 +233,7 @@ export class FrameMng implements IGetFrm {
 		ld2.load((_ldr, hRes)=> {
 			for (const [s2, {data: {src}}] of Object.entries(hRes)) {
 				const u2 = this.#hEncImgOUrl[s2]
-				= src + (src.slice(0, 5) === 'blob:' ?'' :prmSrc);
+				= src + (src.startsWith('blob:') ?'' :prmSrc);
 				for (const i of this.#hAEncImg[s2]) {
 					i.src = u2;
 					if (onload) i.onload = ()=> onload(i);
@@ -188,6 +242,7 @@ export class FrameMng implements IGetFrm {
 			//	URL.revokeObjectURL(u2);// 画面遷移で毎回再生成するので
 			}
 		});
+*/
 	}
 	static	#hAEncImg		: {[src: string]: HTMLImageElement[]}	= {};
 	static	#hEncImgOUrl	: {[src: string]: string}				= {};

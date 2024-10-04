@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {Container, Text, Rectangle, Texture, TextStyle, Sprite, Graphics, IDestroyOptions} from 'pixi.js';
+import {Container, Text, Rectangle, Texture, TextStyle, Sprite, Graphics, Color} from 'pixi.js';
 import {uint, IEvtMng, argChk_Boolean, argChk_Num, mesErrJSON} from './CmnLib';
 import {HArg} from './Grammar';
 import {SpritesMng} from './SpritesMng';
@@ -23,17 +23,15 @@ export class Button extends Container {
 
 		Button.#procMasume4txt = (me, txt)=> me.addChild(
 			(new Graphics)
-			.beginFill(0x883388, 0.2)
-			.lineStyle(1, 0x883388, 1)
-			.drawRect(txt.x, txt.y, txt.width, txt.height)
-			.endFill()
+			.rect(txt.x, txt.y, txt.width, txt.height)
+			.fill(new Color(0x883388).setAlpha(0.2))
+			.stroke({width: 1, color: 0x883388})
 		);
 		Button.#procMasume4pic = (me, sp, w3, h)=> me.addChild(
 			(new Graphics)
-			.beginFill(0x883388, 0.2)
-			.lineStyle(1, 0x883388, 1)
-			.drawRect(sp.x, sp.y, w3, h)
-			.endFill()
+			.rect(sp.x, sp.y, w3, h)
+			.fill(new Color(0x883388).setAlpha(0.2))
+			.stroke({width: 1, color: 0x883388})
 		);
 	}
 
@@ -121,11 +119,13 @@ export class Button extends Container {
 		const height = argChk_Num(hArg, 'height', 30);
 		const style = new TextStyle({
 			align		: 'center',
-			dropShadow	: true,
-			dropShadowAlpha	: 0.7,
-			dropShadowColor	: 'white',
-			dropShadowBlur	: 7,
-			dropShadowDistance	: 0,
+			dropShadow	: {
+				alpha	: 0.7,
+//				angle	: number;
+				blur	: 7,
+				color	: 'white',
+				distance: 0,
+			},
 			fill		: this.#o.enabled ?'black' :'gray',
 			fontFamily	: Button.fontFamily,
 			fontSize	: height,
@@ -135,22 +135,25 @@ export class Button extends Container {
 			const o = JSON.parse(hArg.style);
 			for (const [nm, v] of Object.entries(o)) (style as any)[nm] = v;
 		//	style = {...style, ...JSON.parse(hArg.style)};	// 上手くいかない
+
+			this.#o = {...this.#o, ...o};
 		} catch (e) {
 			throw new Error(mesErrJSON(hArg, 'style', e.message));
 		}
 
-		const txt = new Text(hArg.text ?? '', style);
+		const txt = new Text({text: hArg.text ?? '', style})
 		txt.alpha = argChk_Num(hArg, 'alpha', txt.alpha);	// 上にまとめない
 		txt.width = argChk_Num(hArg, 'width', 100);
 		txt.height = hArg.height = height;
 		this.setText = text=> txt.text = text;
 
-		this.#o.type = 'text';	// dump用
-		this.#o = {...this.#o, ...style};
-		this.#o.alpha = txt.alpha;
-		this.#o.text = txt.text;
-		this.#o.width = txt.width;
-		this.#o.height = txt.height;
+		this.#o = {...this.#o,
+			type	: 'text',	// dump用
+			alpha	: txt.alpha,
+			text	: txt.text,
+			width	: txt.width,
+			height	: txt.height,
+		};
 //		this.#idc = new TxtBtnDesignCast(this, hArg, txt);
 
 		let isStop = false;
@@ -165,6 +168,7 @@ export class Button extends Container {
 					this.#loaded_b_pic(sp, txt);
 					this.#o.width = this.width;
 					this.#o.height = this.height;
+					txt.label = JSON.stringify(this.#o);
 				},
 				isStop=> {
 					Layer.setBlendmode(this, hArg);
@@ -173,7 +177,7 @@ export class Button extends Container {
 			);
 			isStop = this.#sps.ret;
 		}
-		txt.name = JSON.stringify(this.#o);
+		txt.label = JSON.stringify(this.#o);
 
 		this.addChild(txt);
 		this.#rctBtnTxt.width = txt.width;	// addChild()後に取得すること
@@ -213,7 +217,7 @@ export class Button extends Container {
 		if (! isStop) resolve();
 	}
 
-	override	destroy(_options?: IDestroyOptions | boolean): void {
+	override	destroy(): void {
 		this.evtMng.unButton(this);
 		this.#sps.destroy();
 		super.destroy();
@@ -227,14 +231,19 @@ export class Button extends Container {
 	#loaded_b_pic(sp: Sprite, txt: Text) {
 		this.setChildIndex(sp, 0);
 		sp.alpha = txt.alpha;
-		sp.setTransform(
-			txt.x, txt.y,
-			1, 1, txt.rotation, 0, 0,
-			(sp.width -txt.width) /2,
-			(sp.height -txt.height) /2,
-		);
+		sp.updateTransform({
+			x		: txt.x,
+			y		: txt.y,
+			scaleX	: 1,
+			scaleY	: 1,
+			rotation: txt.rotation,
+			skewX	: 0,
+			skewY	: 0,
+			pivotX	: (sp.width -txt.width) /2,
+			pivotY	: (sp.height -txt.height) /2,
+		});
 
-		sp.name = txt.name;
+		sp.label = txt.label;
 	}
 
 	normal		: ()=> void		= ()=> {};
@@ -247,10 +256,10 @@ export class Button extends Container {
 		const w_3 = sp.width /3;
 		const w = this.#o.enabled ?w_3 :sp.width;
 		const h = sp.height;
-		const tx = sp.texture.baseTexture;
-		const txNormal = new Texture(tx, new Rectangle(0, 0, w_3, h));
-		const txClicked = new Texture(tx, new Rectangle(w_3, 0, w_3, h));
-		const txHover = new Texture(tx, new Rectangle(w_3 *2, 0, w_3, h));
+		const {source} = sp.texture;
+		const txNormal = new Texture({source, frame: new Rectangle(0, 0, w_3, h)});
+		const txClicked = new Texture({source, frame: new Rectangle(w_3, 0, w_3, h)});
+		const txHover = new Texture({source, frame: new Rectangle(w_3 *2, 0, w_3, h)});
 		const normal = ()=> sp.texture = txNormal;
 		if (this.#o.enabled) normal();
 
@@ -272,7 +281,7 @@ export class Button extends Container {
 			this.scale.y *= this.#o.height /h;
 		}
 		else this.#o.height = h;
-		sp.name = JSON.stringify(this.#o);	// dump用
+		sp.label = JSON.stringify(this.#o);	// dump用
 
 		Button.#procMasume4pic(this, sp, w, h);
 	}

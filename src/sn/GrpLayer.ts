@@ -119,7 +119,7 @@ export class GrpLayer extends Layer {
 			this.spLay.alpha = 1;
 			for (const s of this.spLay.children) s.visible = true;
 			this.#spTsy.visible = false;
-			GrpLayer.#appPixi.renderer.render(this.spLay, {renderTexture: this.#rtTsy});	// clear: true
+			GrpLayer.#appPixi.renderer.render({container: this.spLay, target: this.#rtTsy});
 			this.spLay.alpha = a;
 			for (const s of this.spLay.children) s.visible = false;
 		}
@@ -178,14 +178,14 @@ export class GrpLayer extends Layer {
 	override playback(hLay: any, aPrm: Promise<void>[]): void {
 		super.playback(hLay, aPrm);
 		if (hLay.sBkFn === '' && hLay.sBkFace === '') {
-			this.#sBkFn		= hLay.sBkFn;
-			this.#sBkFace	= hLay.sBkFace;
+			this.#sBkFn		= '';
+			this.#sBkFace	= '';
 //			this.#idc.sethArg(hLay.idc_hArg);
 			return;
 		}
 
 		aPrm.push(new Promise(re=> this.#laySub(
-			{fn: hLay.sBkFn, face: hLay.sBkFace, left: hLay.x, top: hLay.y, alpha: hLay.alpha, blendmode: Layer.getNum2Blendmode(hLay.blendMode), rotation: hLay.rotation, scale_x: hLay.scale_x, scale_y: hLay.scale_y},
+			{fn: hLay.sBkFn, face: hLay.sBkFace, left: hLay.x, top: hLay.y, alpha: hLay.alpha, blendmode: hLay.blendMode, rotation: hLay.rotation, scale_x: hLay.scale_x, scale_y: hLay.scale_y},
 			_isStop=> {this.spLay.position.set(hLay.x, hLay.y); re()},
 				// Layer.setXY()の後に再度移動
 		)));

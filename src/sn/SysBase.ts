@@ -11,7 +11,7 @@ import {argChk_Boolean, CmnLib} from './CmnLib';
 import {EventListenerCtn} from './EventListenerCtn';
 import {Main} from './Main';
 
-import {Application, DisplayObject, RenderTexture} from 'pixi.js';
+import {Application, Container, RenderTexture} from 'pixi.js';
 import {io, Socket} from 'socket.io-client';
 import {IConfig, IFn2Path, ISysRoots} from './ConfigBase';
 
@@ -135,7 +135,7 @@ export class SysBase implements ISysRoots, ISysBase {
 			searchPath: (fn, extptn = '')=>	this.cfg.searchPath(fn, extptn),
 			getVal: val.getVal,
 			resume: ()=> main.resume(),
-			render: (dsp: DisplayObject, renderTexture: RenderTexture, clear = false)=> appPixi.renderer.render(dsp, {renderTexture, clear}),
+			render: (ctn: Container, rt: RenderTexture, clear = false)=> appPixi.renderer.render({container: ctn, target: rt, clear}),
 			setDec: ()=> {},
 			setDecAB: ()=> {},
 			setEnc: ()=> {},

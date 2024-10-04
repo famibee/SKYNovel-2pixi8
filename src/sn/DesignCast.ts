@@ -16,7 +16,7 @@ import {Button} from './Button';
 import {GrpLayer} from './GrpLayer';
 import {Config} from './Config';
 
-import {Application, Text, Sprite} from 'pixi.js';
+import {Application, Text, Sprite, Container} from 'pixi.js';
 
 
 export class DesignCast {
@@ -53,13 +53,13 @@ export class DesignCast {
 
 // 画像レイヤ
 export class GrpLayDesignCast extends DesignCast {
-	constructor(_spLay: Sprite, _gl: GrpLayer) {super('#29e', true)}
+	constructor(_spLay: Container, _gl: GrpLayer) {super('#29e', true)}
 	setSp(_sp: Sprite) {}
 }
 
 // 文字レイヤ
 export class TxtLayDesignCast extends DesignCast {
-	constructor(_spLay: Sprite, _ts: TxtStage) {
+	constructor(_spLay: Container, _ts: TxtStage) {
 		super('#29e', true);
 	}
 }

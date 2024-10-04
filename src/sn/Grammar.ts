@@ -47,7 +47,8 @@ export type HArg = {
 
 	time?	: number;
 	rule?	: string;
-	glsl?	: string;
+	vert?	: string;
+	frag?	: string;
 	render?	: boolean;
 
 	pos?	: string;

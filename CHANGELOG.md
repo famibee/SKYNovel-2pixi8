@@ -1,3 +1,7 @@
+
+- fix: startsWith、endsWith を積極使用
+- fix: [playse]系で同じ buf で、ページ移動状態でなく、違う fn を再生する際に再生していたサウンドリソースを破棄するように
+- fix: スクリプトリソースは内部オブジェクト生成後すぐ破棄するように
 - fix: esbuild-jest を tsx に切り替え
 - test: esbuild-jest がメンテされてないので ts-jest に切り替え
 

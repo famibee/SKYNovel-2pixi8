@@ -22,7 +22,7 @@ import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {disableEvent, enableEvent} from './ReadState';
 import {CmnTween} from './CmnTween';
 
-import {Loader} from 'pixi.js';
+import {Assets} from 'pixi.js';
 
 interface HScript {
 	[fn: string]: Script;
@@ -769,9 +769,9 @@ export class ScriptIterator {
 	#jumpWork(fn = '', label = '', idx = 0) {
 		if (! fn && ! label) this.main.errScript('[jump系] fnまたはlabelは必須です');
 		if (label) {
-			if (label.at(0) !== '*') this.main.errScript('[jump系] labelは*で始まります');
+			if (! label.startsWith('*')) this.main.errScript('[jump系] labelは*で始まります');
 			this.#skipLabel = label;
-			if (this.#skipLabel.slice(0, 2) !== '**') this.#idxToken = idx;
+			if (! this.#skipLabel.startsWith('**')) this.#idxToken = idx;
 		}
 		else {
 			this.#skipLabel = '';
@@ -788,6 +788,24 @@ export class ScriptIterator {
 		const st = this.#hScript[fn];
 		if (st) {this.#script = st; this.analyzeInit(); return}
 
+	{
+//		const fp_diff = this.#cnvSnPath(fn +'@');
+			// TODO: 派生ファイル対応
+		Assets.load({src: full_path, loadParser: 'loadTxt'}).then(b=> {
+			this.nextToken = this.#nextToken_Proc;
+			this.#lineNum = 1;
+
+			this.#resolveScript(b);
+			this.hTag.record_place({});
+			Assets.unload(full_path);
+			this.main.resume(()=> this.analyzeInit());
+				// 直接呼んでもいいが、内部コールスタック積んだままになるのがなんかイヤで
+		})
+		.catch(e=> console.error(`fn:ScriptIterator.ts jumpWork e:%o`, e))
+	}
+
+
+/*
 		const ldr = new Loader;
 		let fp_diff = '';
 		try {
@@ -831,6 +849,7 @@ export class ScriptIterator {
 			this.main.resume(()=> this.analyzeInit());
 				// 直接呼んでもいいが、内部コールスタック積んだままになるのがなんかイヤで
 		});
+*/
 		this.main.stop();
 	}
 	private	analyzeInit(): void {

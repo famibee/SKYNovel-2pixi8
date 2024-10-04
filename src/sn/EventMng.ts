@@ -21,17 +21,24 @@ import {SysBase} from './SysBase';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {ReadState} from './ReadState';
 
-import {Container, Application, utils} from 'pixi.js';
-const {GamepadListener} = require('gamepad.js');
+import {Application, Assets, Container} from 'pixi.js';
+//import {GamepadListener} from 'gamepad.js';
+//const {GamepadListener} = require('gamepad.js');
+/*
+	- Xユーザーのまさとらんさん: 「ブラウザからあらゆる ゲームコントローラーを操作 できるようにしてくれるJavaScriptライブラリ 【joypad.js】 https://t.co/CTF7sxU5kW https://t.co/t4IqMsD2qo」 / Twitter https://x.com/0310lan/status/1713886757874237521
+	- ArunMichaelDsouza/joypad.js: JavaScript library that lets you connect and use various gaming controllers with browsers that support the Gamepad API. Less than 5KB in size with zero dependencies and support for button press, axis movement events and vibration play effect. https://github.com/ArunMichaelDsouza/joypad.js
+*/
 import {createPopper, Instance as InsPop} from '@popperjs/core';
 
 export class EventMng implements IEvtMng {
 	readonly	#elc		= new EventListenerCtn;
 
+/*
 	readonly	#gamepad	= new GamepadListener({
 		analog	: false,
 		deadZone: 0.3,
 	});
+*/
 	readonly	#fcs		= new FocusMng;
 
 	#rs	: ReadState;
@@ -151,7 +158,7 @@ export class EventMng implements IEvtMng {
 //console.log(`fn:EventMng.ts languagechange `);
 			fncUpdNavLang();
 			this.fire('sn:chgNavLang', e);
-			utils.clearTextureCache();
+			Assets.cache.reset();
 		});
 		fncUpdNavLang();
 
@@ -183,7 +190,8 @@ export class EventMng implements IEvtMng {
 		}
 		ReadState.init((rs: ReadState)=> this.#rs = rs, main, val, layMng, scrItr, sndMng, hTag, this.#fcs, procWheel4wle, this.#elmHint, cfg);
 
-		// Gamepad
+		// TODO: Gamepad
+/*
 		if (CmnLib.debugLog) {
 			this.#gamepad.on('gamepad:connected', (e: any)=> console.log(`👺<'gamepad:connected' index:${e.detail.index} id:${e.detail.gamepad.id}`));
 			this.#gamepad.on('gamepad:disconnected', (e: any)=> console.log(`👺<'gamepad:disconnected' index:${e.detail.index} id:${e.detail.gamepad.id}`));
@@ -219,7 +227,7 @@ export class EventMng implements IEvtMng {
 			else Main.cvs.dispatchEvent(new Event('contextmenu'));
 		});
 		this.#gamepad.start();
-
+*/
 		this.#elc.add(window, 'keyup', (e: any)=> {
 			if (e['isComposing']) return;	// サポートしてない環境でもいける書き方
 
@@ -437,7 +445,7 @@ export class EventMng implements IEvtMng {
 		hArg.fn ??= this.scrItr.scriptFn;
 
 		// domイベント
-		if (KeY.slice(0, 4) === 'dom=') {
+		if (KeY.startsWith('dom=')) {
 			const g = ReadState.getHtmlElmList(KeY);
 			if (g.el.length === 0) {
 				if (argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
@@ -508,7 +516,7 @@ export class EventMng implements IEvtMng {
 	// フォーカス移動
 	#set_focus(hArg: HArg) {
 		const {add, del, to} = hArg;
-		if (add?.slice(0, 4) === 'dom=') {
+		if (add?.startsWith('dom=')) {
 			const g = ReadState.getHtmlElmList(add);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 
@@ -524,7 +532,7 @@ export class EventMng implements IEvtMng {
 			return false;
 		}
 
-		if (del?.slice(0, 4) === 'dom=') {
+		if (del?.startsWith('dom=')) {
 			const g = ReadState.getHtmlElmList(del);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 

@@ -18,7 +18,7 @@ import {Hyphenation, IChRect} from './Hyphenation';
 import {ScriptIterator} from './ScriptIterator';
 import {ReadState} from './ReadState';
 
-import {Container, Texture, Sprite, Graphics, Rectangle, Renderer, Application} from 'pixi.js';
+import {Container, Texture, Sprite, Graphics, Rectangle, Renderer, Application, Color} from 'pixi.js';
 import {Tween} from '@tweenjs/tween.js'
 
 interface IInfTxLay {
@@ -77,17 +77,17 @@ export class TxtStage extends Container {
 
 	#hyph	= new Hyphenation;
 	noticeCompTxt	= ()=> {};
-	constructor(private readonly spLay: Sprite, private readonly canFocus: ()=> boolean, private readonly sys: SysBase) {
+	constructor(private readonly spLay: Container, private readonly canFocus: ()=> boolean, private readonly sys: SysBase) {
 		super();
 
 		this.#htmTxt.classList.add('sn_tx');
 		this.#htmTxt.style.position = 'absolute';
-		TxtStage.#appPixi.view.parentElement!.appendChild(this.#htmTxt);
+		TxtStage.#appPixi.canvas.parentElement!.appendChild(this.#htmTxt);
 
 		this.addChild(this.#cntTxt);
 
 		this.addChild(this.#grpDbgMasume);
-		this.#grpDbgMasume.name = 'grpDbgMasume';
+		this.#grpDbgMasume.label = 'grpDbgMasume';
 
 //		this.#idc = new TxtLayDesignCast(this.spLay, this);
 //		this.#idc.adopt(this.#idcCh);
@@ -100,7 +100,7 @@ export class TxtStage extends Container {
 			if (htm === '') return;
 			const {fn, ln} = TxtStage.#scrItr.nowScrFnLn();
 			const id = `dumpHtm ${
-				this.spLay.name.slice(0, -7)	// 末尾「 page=B」削り
+				this.spLay.label.slice(0, -7)	// 末尾「 page=B」削り
 				.replaceAll(':', '=')			// ファイル名で困る文字
 			}(fn=${fn} line=${ln})`;
 			sys.outputFile(
@@ -202,7 +202,7 @@ export class TxtStage extends Container {
 		const lh = s.lineHeight ?? '0';
 		this.#lh_half = this.#isTategaki
 			? 0
-			: (	(lh.slice(-2) === 'px')
+			: (	(lh.endsWith('px'))
 				? parseFloat(lh)
 				: (fs *parseFloat(lh) -fs)) /2;
 			// globalThis.getComputedStyle(this.htmTxt)がチョイチョイ値を返さないので
@@ -227,7 +227,7 @@ export class TxtStage extends Container {
 	get	getWidth() {return this.#infTL.$width}
 	get	getHeight() {return this.#infTL.$height}
 
-	setSize(width: number, height: number) {
+	setMySize(width: number, height: number) {
 		this.#infTL.$width = width;
 		this.#infTL.$height = height;
 		this.#htmTxt.style.width = this.#infTL.$width +'px';
@@ -585,25 +585,24 @@ export class TxtStage extends Container {
 		if (begin === 0) {	// 初回
 			if (TxtStage.#cfg.oCfg.debug.masume) {
 				if (CmnLib.debugLog) console.log(`🍌 masume ${
-					this.name} v:${this.visible} l:${this.x} t:${this.y
+					this.label} v:${this.visible} l:${this.x} t:${this.y
 					} a:${this.alpha} pl:${this.#infTL.pad_left
 					} pr:${this.#infTL.pad_right
 					} pt:${this.#infTL.pad_top} pb:${this.#infTL.pad_bottom
 					} w:${this.#infTL.$width} h:${this.#infTL.$height}`);
 
 				this.#grpDbgMasume.clear()
-				.beginFill(0x33FF00, 0.2)	// 文字レイヤ
-				.lineStyle(1, 0x33FF00, 1)
-				.drawRect(-this.#infTL.pad_left, -this.#infTL.pad_top, this.#infTL.$width, this.#infTL.$height)
-					// 親の親の cntInsidePadding が padding ぶん水平移動してるので引く。
-				.endFill()
+				// 文字レイヤ
+				.rect(-this.#infTL.pad_left, -this.#infTL.pad_top, this.#infTL.$width, this.#infTL.$height)	// 親の親の cntInsidePadding が padding ぶん水平移動してるので引く
+				.fill(new Color(0x33FF00).setAlpha(0.2))
+				.stroke({width: 1, color: 0x33FF00})
 
-				.beginFill(0x0033FF, 0.2)	// cntInsidePadding
-				.lineStyle(2, 0x0033FF, 1)
-				.drawRect(0, 0,
+				// cntInsidePadding
+				.rect(0, 0,
 				this.#infTL.$width -this.#infTL.pad_left -this.#infTL.pad_right,
 				this.#infTL.$height -this.#infTL.pad_top -this.#infTL.pad_bottom)
-				.endFill();
+				.fill(new Color(0x0033FF).setAlpha(0.2))
+				.stroke({width: 2, color: 0x0033FF});
 			}
 
 			this.#htmTxt.innerHTML = [...aSpan].join('').replaceAll(/[\n\t]/g, '') +TxtStage.#SPAN_LAST;	// 末尾改行削除挙動対策
@@ -688,10 +687,9 @@ export class TxtStage extends Container {
 			? (v: IChRect, rct: Rectangle)=> {
 				fncMasumeLog(v, rct);
 				this.#grpDbgMasume
-				.beginFill(0x66CCFF, 0.5)
-				.lineStyle(2, 0xFF3300, 1)
-				.drawRect(rct.x, rct.y, rct.width, rct.height)
-				.endFill();
+				.rect(rct.x, rct.y, rct.width, rct.height)
+				.fill(new Color(0x66CCFF).setAlpha(0.5))
+				.stroke({width: 2, color: 0xFF3300});
 			}
 			: ()=> {};
 		const ease = CmnTween.ease(this.#fi_easing);
@@ -716,7 +714,7 @@ export class TxtStage extends Container {
 			if (c.elm.dataset.lnk) {
 				const eCh = c.elm.parentElement!.closest('[data-arg]')! as HTMLElement;
 				const aLnk = JSON.parse(eCh.dataset.arg ?? '{}');
-				aLnk.key = `lnk=[${i}] `+ this.name;
+				aLnk.key = `lnk=[${i}] `+ this.label;
 				const sp = new Sprite;
 				this.#spWork(sp, aLnk, add, rct, ease, cis ?? {});
 
@@ -1001,7 +999,7 @@ export class TxtStage extends Container {
 		to.#infTL = this.#infTL;
 		to.#htmTxt.style.cssText = this.#htmTxt.style.cssText;
 		to.#left = this.#left;
-		to.name = this.name;
+		to.label = this.label;
 		to.#lay_sub();
 //		to.#idc.sethArg(this.#idc.gethArg());
 
@@ -1060,14 +1058,31 @@ export class TxtStage extends Container {
 				//	: this.#infTL.pad_left +this.#infTL.pad_right);
 			}
 			this.#sss.y -= this.#padTx4y;
+/*
+			this.#sss.sourceBounds = new Rectangle(
+				0,
+				0,
+				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
+				Math.min(this.#sss.height, this.#infTL.$height),
+			);	// これがないと画面サイズを超える
+*/
+			// TODO: これで正しいのか不明
+			this.#sss.boundsArea = new Rectangle(
+				0,
+				0,
+				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
+				Math.min(this.#sss.height, this.#infTL.$height),
+			);	// これがないと画面サイズを超える
+/*
 			this.#sss.texture.frame = new Rectangle(
 				0,
 				0,
 				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
 				Math.min(this.#sss.height, this.#infTL.$height),
 			);	// これがないと画面サイズを超える
+*/
 			this.#cntTxt.addChild(this.#sss);
-			rnd.render(this.#sss, {clear: false});
+			rnd.render({container: this.#sss, clear: false});
 			re();
 		}, false);
 	}

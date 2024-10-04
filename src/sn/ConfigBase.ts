@@ -10,7 +10,6 @@ import {int} from './CmnLib';
 export const enum SEARCH_PATH_ARG_EXT {	// #searchPath 使用時、第二引数用
 	DEFAULT	= '',
 	SP_GSM	= 'png|jpg|jpeg|json|svg|webp|mp4|webm',
-		// NOTE: ogvがそもそも再生できないので、ogvのみ保留
 	SCRIPT	= 'sn|ssn',
 	FONT	= 'woff2|woff|otf|ttf',
 	SOUND	= 'mp3|m4a|ogg|aac|flac|wav',
@@ -175,7 +174,7 @@ export class ConfigBase implements IConfig {
 					hFn2Ext[fn0] = ext;
 					continue;
 				}
-				if (ext.slice(-3) !== ':id') continue;
+				if (! ext.endsWith(':id')) continue;
 				const hp = v.slice(v.lastIndexOf('/') +1);
 				const fn = hExts[ext.slice(0, -10)];
 				const res = await this.sys.fetch(fn);
@@ -196,7 +195,7 @@ export class ConfigBase implements IConfig {
 		// 4 match 498 step(~1ms)  https://regex101.com/r/tpVgmI/1
 	searchPath(fn: string, extptn: SEARCH_PATH_ARG_EXT = SEARCH_PATH_ARG_EXT.DEFAULT): string {
 		if (! fn) throw '[searchPath] fnが空です';
-		if (fn.slice(0, 7) === 'http://') return fn;
+		if (fn.startsWith('http://')) return fn;
 
 		const a = fn.match(this.#REG_PATH);
 		let fn0 = a ?a[1] :fn;

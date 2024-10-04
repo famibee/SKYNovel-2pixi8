@@ -25,8 +25,8 @@ export class Pages {
 		f.layname =
 		b.layname = layname;
 		const nm = hArg[':id_tag'] = `layer:${layname} cls:${cls} page:`;
-		f.spLay.name = f.name = nm +'A';
-		b.spLay.name = b.name = nm +'B';
+		f.spLay.label = f.name = nm +'A';
+		b.spLay.label = b.name = nm +'B';
 		fore.addChild(f.spLay);
 		back.addChild(b.spLay);
 		argChk_Boolean(hArg, 'visible', true);

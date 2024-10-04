@@ -12,7 +12,7 @@ import {IVariable, IData4Vari, IMain, HPlugin, HSysBaseArg} from './CmnInterface
 import {Main} from './Main';
 import {DebugMng} from './DebugMng';
 
-import {Application} from 'pixi.js';
+import {Application, Assets} from 'pixi.js';
 
 import {HINFO, HPROC, SAVE_WIN_INF} from '../preload';
 import {IpcRendererEvent, MessageBoxOptions} from 'electron/renderer';
@@ -23,6 +23,9 @@ const to_app: HPROC = (window as any).to_app;
 export class SysApp extends SysNode {
 	constructor(hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}) {
 		super(hPlg, arg);
+
+		Assets.init({basePath: process.cwd()});		//TODO: Appパス
+			// SysNode に置くとテストで【already init()】
 
 		globalThis.addEventListener('DOMContentLoaded', async ()=> this.loaded(hPlg, arg), {once: true, passive: true});
 	}

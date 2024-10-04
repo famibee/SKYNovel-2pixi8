@@ -30,10 +30,10 @@ export class Config extends ConfigBase {
 	}
 
 	override	searchPath(path: string, extptn: SEARCH_PATH_ARG_EXT = SEARCH_PATH_ARG_EXT.DEFAULT): string {
-		if (path.slice(0, 11) === 'downloads:/') {
+		if (path.startsWith('downloads:/')) {
 			return this.sys.path_downloads + path.slice(11);
 		}
-		if (path.slice(0, 10) === 'userdata:/') {
+		if (path.startsWith('userdata:/')) {
 			return this.sys.path_userdata + 'storage/'+ path.slice(10);
 		}
 

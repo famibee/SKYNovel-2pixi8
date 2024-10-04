@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, getDateStr, uint, IEvtMng, argChk_Boolean, argChk_Num, getExt, addStyle, argChk_Color, parseColor} from './CmnLib';
+import {CmnLib, getDateStr, uint, IEvtMng, argChk_Boolean, argChk_Num, getExt, addStyle, argChk_Color} from './CmnLib';
 import {CmnTween} from './CmnTween';
 import {IHTag, HArg} from './Grammar';
 import {IVariable, IMain, HIPage, IGetFrm, IPropParser, IRecorder} from './CmnInterface';
@@ -27,7 +27,7 @@ import {DesignCast} from './DesignCast';
 import {EventListenerCtn} from './EventListenerCtn';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Container, Application, Graphics, Texture, Filter, RenderTexture, Sprite, DisplayObject, autoDetectRenderer} from 'pixi.js';
+import {Application, Assets, Color, Container, Filter, GlProgram, Graphics, RenderTexture, Sprite, autoDetectRenderer} from 'pixi.js';
 
 export interface IMakeDesignCast { (idc	: DesignCast): void; };
 
@@ -168,25 +168,24 @@ export class LayerMng implements IGetFrm, IRecorder {
 			this.#cmdTxt('grp｜'+ sArg);
 		};
 
-		this.#bg_color = parseColor(String(cfg.oCfg.init.bg_color));
+		this.#bg_color = new Color(cfg.oCfg.init.bg_color).toNumber();
 		const grp = new Graphics;
 		grp
-		.beginFill(this.#bg_color, 1)	// イベントを受け取るためにも塗る
-		.lineStyle(0, this.#bg_color)
-		.drawRect(0, 0, CmnLib.stageW, CmnLib.stageH)
-		.endFill();
+		.rect(0, 0, CmnLib.stageW, CmnLib.stageH)
+		.fill(new Color(this.#bg_color))
+		.stroke({width: 1, color: this.#bg_color})
 		this.#fore.addChild(grp.clone());
 		this.#back.addChild(grp);
 		this.#back.visible = false;
-		this.#fore.name = 'page:A';	// 4tst
-		this.#back.name = 'page:B';	// 4tst
+		this.#fore.label = 'page:A';	// 4tst
+		this.#back.label = 'page:B';	// 4tst
 
 		this.#stage = appPixi.stage;
 		this.#stage.addChild(this.#back);
 		this.#stage.addChild(this.#fore);
 		this.#stage.addChild(this.#spTransBack);
 		this.#stage.addChild(this.#spTransFore);
-		this.#stage.name = 'stage';	// 4tst
+		this.#stage.label = 'stage';	// 4tst
 /*
 		console.group('new DispMng info');
 		console.info(appPixi.renderer);
@@ -269,10 +268,9 @@ export class LayerMng implements IGetFrm, IRecorder {
 		}
 		if (visible) this.#stage.addChild(
 			(this.#grpCover = new Graphics)
-			.beginFill(bg_color)
-			.lineStyle(0, bg_color)
-			.drawRect(0, 0, CmnLib.stageW, CmnLib.stageH)
-			.endFill()
+			.rect(0, 0, CmnLib.stageW, CmnLib.stageH)
+			.fill(new Color(bg_color))
+			.stroke({width: 0, color: bg_color})
 		);
 	}
 
@@ -335,7 +333,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 	//MARK: スナップショット
 	#snapshot(hArg: HArg) {
 		const fn0 = hArg.fn
-		? hArg.fn.slice(0, 10) === 'userdata:/'
+		? hArg.fn.startsWith('userdata:/')
 			? hArg.fn
 			: `downloads:/${hArg.fn + getDateStr('-', '_', '', '_')}.png`
 		: `downloads:/snapshot${getDateStr('-', '_', '', '_')}.png`;
@@ -376,9 +374,9 @@ export class LayerMng implements IGetFrm, IRecorder {
 	}
 	#snapshot4web(hArg: HArg, url: string, width: number, height: number): boolean {
 		disableEvent();
-		const ext = getExt(url);
 		const b_color = argChk_Color(hArg, 'b_color', this.#bg_color);
-		const rnd = autoDetectRenderer({
+		const ext = getExt(url);
+		autoDetectRenderer({
 			width,
 			height,
 			backgroundAlpha: (b_color > 0x1000000) && (ext === 'png') ?0 :1,
@@ -386,53 +384,45 @@ export class LayerMng implements IGetFrm, IRecorder {
 			preserveDrawingBuffer: true,
 			backgroundColor: b_color & 0xFFFFFF,
 			autoDensity: true,
-		});
-		const a = [];
-		const pg = hArg.page !== 'back' ?'fore' :'back';
-		if (CmnTween.isTrans) a.push(new Promise<void>(re=> {	// [trans]中
-			this.#back.visible = true;
-			for (const lay of this.#aBackTransAfter) {
-				rnd.render(lay, {clear: false});
-			}
-			this.#back.visible = false;
-			this.#spTransBack.visible = true;
+		}).then(async rnd=> {
+			const a = [];
+			const pg = hArg.page !== 'back' ?'fore' :'back';
+			if (CmnTween.isTrans) a.push(new Promise<void>(re=> {// [trans]中
+				this.#back.visible = true;
+				for (const cnt of this.#aBackTransAfter) {
+					rnd.render({container: cnt, clear: false});
+				}
+				this.#back.visible = false;
+				this.#spTransBack.visible = true;
 
-			const a = [...this.#fore.filters!];
-			this.#fore.filters = [...a!, ...this.#spTransFore.filters!];
-			this.#fore.visible = true;
-			rnd.render(this.#fore, {clear: false});
-			this.#fore.visible = false;
-			this.#fore.filters = a;
-			re();
-		}));
-		else for (const ln of this.#getLayers(hArg.layer)) a.push(
-			new Promise<void>(re=> this.#hPages[ln][pg].snapshot(rnd, ()=>re()))
-		);
-		Promise.allSettled(a).then(async ()=> {
+				const a = this.#fore.filters instanceof Array ? this.#fore.filters: [this.#fore.filters];
+				this.#fore.filters = [
+					...a!,
+					...this.#spTransFore.filters instanceof Array
+					? this.#spTransFore.filters
+					: [this.#spTransFore.filters]
+				];
+				this.#fore.visible = true;
+				rnd.render({container: this.#fore, clear: false});
+				this.#fore.visible = false;
+				this.#fore.filters = a;
+				re();
+			}));
+			else for (const ln of this.#getLayers(hArg.layer)) a.push(
+				new Promise<void>(re=> this.#hPages[ln][pg].snapshot(rnd, ()=>re()))
+			);
+			await Promise.allSettled(a);
+
 			const renTx = RenderTexture.create({width: rnd.width, height: rnd.height});	// はみ出し対策
-			rnd.render(this.#stage, {renderTexture: renTx});
-/*
+			rnd.render({container: this.#stage, target: renTx});
 			await this.sys.savePic(
 				url,
-				rnd.plugins.extract.base64(Sprite.from(renTx)),
-			);
-*/
-
-			const imgUrl = rnd.view.toDataURL('image/jpeg')
-			await this.sys.savePic(
-				url,
-				imgUrl
+				await rnd.extract.base64(Sprite.from(renTx)),
 			);
 
-/*
-			await this.sys.savePic(
-				fn,
-				rnd.plugins.extract.base64(Sprite.from(renTx), 'image/jpeg'),
-//				rnd.plugins.extract.base64(Sprite.from(renTx)),
-			);
-*/
 			if (! CmnTween.isTrans) for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
 			rnd.destroy(true);
+
 			enableEvent();
 		});
 
@@ -576,11 +566,46 @@ export class LayerMng implements IGetFrm, IRecorder {
 		return false;
 	}
 
-	readonly	#srcRuleTransFragment = `
+	//===================================================
+	//MARK: WebGL 頂点シェーダー
+	// It's easier to see with VSCode extension 'GLSL with Imports'
+	// #version は入れない
+	static	readonly	#glslRuleTransVert = /* glsl */`
 precision mediump float;
 
-varying vec2 vTextureCoord;
-uniform sampler2D uSampler;
+in vec2 aPosition;
+
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+
+out vec2 vTextureCoord;
+
+vec4 filterVertexPosition() {
+	vec2 p = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+
+	p.x = p.x * (2.0 / uOutputTexture.x) - 1.0;
+	p.y = p.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+
+	return vec4(p, 0.0, 1.0);
+}
+
+vec2 filterTextureCoord() {
+	return aPosition * (uOutputFrame.zw * uInputSize.zw);
+}
+
+void main() {
+	gl_Position = filterVertexPosition();
+	vTextureCoord = filterTextureCoord();
+}`;
+
+	//===================================================
+	//MARK: WebGL フラグメントシェーダー
+	static	readonly	#glslRuleTransFrag = /* glsl */`
+precision mediump float;
+
+in vec2 vTextureCoord;
+uniform sampler2D uTexture;
 
 uniform sampler2D rule;
 uniform float vague;
@@ -588,31 +613,66 @@ uniform float tick;
 
 uniform vec4 inputPixel;
 uniform highp vec4 outputFrame;
-vec2 getUV(vec2 coord) {
-	return coord * inputPixel.xy / outputFrame.zw;
-}
 
-void main(void) {
-	vec4 fg = texture2D(uSampler, vTextureCoord);
-	vec4 ru = texture2D(rule, getUV(vTextureCoord));
+void main() {
+	vec4 fg = texture(uTexture, vTextureCoord);
+	vec4 ru = texture(rule,     vTextureCoord);
+
+	float v = ru.r - tick;
+
+	gl_FragColor = abs(v) < vague
+		? vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5)
+		: v >= 0.0
+			? fg
+			: vec4(0);
+}`;
+/*
+	末尾が読みづらいが、以下のif文を消して三項演算子にしている。
+
+	if (abs(v) < vague) {
+		float a = fg.a *(0.5 +v /vague *0.5);
+		gl_FragColor = vec4(fg.rgb *a, a);
+		return;
+	}
+	gl_FragColor = v >= 0.0 ? fg : vec4(0);
+
+
+		★GLSL : don't use "if"｜Nobu https://note.com/nobuhirosaijo/n/n606a3f5d8e89
+			> if文はあまり使わない方がいいらしい (処理負荷が高い)
+*/
+
+
+/*	// 動いた！　以下は保存用、触らない
+in vec2 vTextureCoord;
+uniform sampler2D uTexture;
+
+uniform sampler2D rule;
+uniform float vague;
+uniform float tick;
+
+uniform vec4 inputPixel;
+uniform highp vec4 outputFrame;
+
+void main() {
+	vec4 fg = texture(uTexture, vTextureCoord);
+	vec4 ru = texture(rule,     vTextureCoord);
 
 	float v = ru.r - tick;
 	if (abs(v) < vague) {
-		float f_a = fg.a *(0.5 +v /vague *0.5);
+		float a = fg.a *(0.5 +v /vague *0.5);
+		gl_FragColor = vec4(fg.rgb *a, a);
+		return;
+	}
 
-		gl_FragColor.rgb = fg.rgb *f_a;
-		gl_FragColor.a = f_a;
-	}
-	else {
-		gl_FragColor = (v >= 0.0)? fg : vec4(0);
-	}
-}`;
-	#ufRuleTrans = {
-		rule : Texture.EMPTY,
-		vague : 0.0,
-		tick : 0.0,
-	};
-	#fltRule = new Filter(undefined, this.#srcRuleTransFragment, this.#ufRuleTrans);
+	gl_FragColor = v >= 0.0 ? fg : vec4(0);
+*/
+
+
+	//===================================================
+	//MARK: WebGPU フラグメントシェーダー
+	// It's easier to see with VSCode extension 'WGSL Literal'
+//	static	readonly	#wgslRuleTrans = /* wgsl */``;
+
 
 	#rtTransBack = RenderTexture.create({
 		width: CmnLib.stageW,
@@ -626,7 +686,7 @@ void main(void) {
 	});
 	#spTransFore = new Sprite(this.#rtTransFore);
 
-	#aBackTransAfter	: DisplayObject[] = [];
+	#aBackTransAfter	: Container[] = [];
 
 	//MARK: ページ裏表を交換
 	#trans(hArg: HArg) {
@@ -634,42 +694,71 @@ void main(void) {
 		this.#evtMng.hideHint();
 
 		const {layer} = hArg;
-		this.#aBackTransAfter = [];
-		const hTarget: {[ln: string]: boolean} = {};
-		const aFore: Layer[] = [];
+		const sDoTrans = new Set<string>;
+		const aLayFore: Layer[] = [];
 		for (const ln of this.#getLayers(layer)) {
-			hTarget[ln] = true;
-			aFore.push(this.#hPages[ln].fore);
+			sDoTrans.add(ln);
+			aLayFore.push(this.#hPages[ln].fore);
 		}
-		const aBack: Layer[] = [];
+		const aLayBack: Layer[] = [];
+		this.#aBackTransAfter = [];
 		for (const ln of this.#getLayers()) {
-			const lay = this.#hPages[ln][hTarget[ln] ?'back' :'fore'];
+			const lay = this.#hPages[ln][sDoTrans.has(ln) ?'back' :'fore'];
 			this.#aBackTransAfter.push(lay.spLay);
-			aBack.push(lay);
+			aLayBack.push(lay);
 		}
+
+		const comp = async ()=> {
+console.log(`fn:LayerMng.ts line:650 comp`);
+			[this.#fore, this.#back] = [this.#back, this.#fore];
+			const aPrm: Promise<void>[] = [];
+			for (const [ln, pg] of Object.entries(this.#hPages)) {
+				if (sDoTrans.has(ln)) {pg.transPage(aPrm); continue}
+
+				// transしないために交換する
+				const {fore: {spLay: f}, back: {spLay: b}} = pg;
+				const idx = this.#fore.getChildIndex(b);
+				this.#fore.removeChild(b);
+				this.#back.removeChild(f);
+				this.#fore.addChildAt(f, idx);
+				this.#back.addChildAt(b, idx);
+			}
+			await Promise.allSettled(aPrm);
+
+			this.#fore.visible = true;
+			this.#back.visible = false;
+			this.#spTransBack.visible = false;
+			this.#spTransFore.visible = false;
+		};
+		const time = argChk_Num(hArg, 'time', 0);
+//		hArg[':id'] = pg.fore.name.slice(0, -7);
+//		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
+console.log(`fn:LayerMng.ts trans: A:${time === 0 || this.#evtMng.isSkipping} time:${time}`);
+		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
+
+
 		this.#rtTransBack.resize(CmnLib.stageW, CmnLib.stageH);
-		this.appPixi.renderer.render(this.#back, {renderTexture: this.#rtTransBack});	// clear: true
 
 		let fncRenderBack = ()=> {
 			this.#back.visible = true;
 			for (const spLay of this.#aBackTransAfter) {
-				this.appPixi.renderer.render(spLay, {renderTexture: this.#rtTransBack, clear: false});
+				this.appPixi.renderer.render({container: spLay, target: this.#rtTransBack, clear: false});
 			}
 			this.#back.visible = false;
 		};
-		if (! aBack.some(lay=> lay.containMovement)) {
+		if (! aLayBack.some(lay=> lay.containMovement)) {
 			const oldFnc = fncRenderBack;	// 動きがないなら最初に一度
 			fncRenderBack = ()=> {fncRenderBack = ()=> {}; oldFnc()};
 		}
 
 		this.#rtTransFore.resize(CmnLib.stageW, CmnLib.stageH);
-		this.appPixi.renderer.render(this.#fore, {renderTexture: this.#rtTransFore});	// clear: true
+		this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});	// clear: true
 		let fncRenderFore = ()=> {
 			this.#fore.visible = true;
-			this.appPixi.renderer.render(this.#fore, {renderTexture: this.#rtTransFore});
+			this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});
 			this.#fore.visible = false;
 		};
-		if (! aFore.some(lay=> lay.containMovement)) {
+		if (! aLayFore.some(lay=> lay.containMovement)) {
 			const oldFnc = fncRenderFore;	// 動きがないなら最初に一度
 			fncRenderFore = ()=> {fncRenderFore = ()=> {}; oldFnc()};
 		}
@@ -686,61 +775,72 @@ void main(void) {
 		//this.sprRtAtTransBack.visible = true;	// trans中専用back(Render Texture)
 		//this.sprRtAtTransFore.visible = true;	// trans中専用fore(Render Texture)
 		this.#spTransFore.alpha = 1;
-		const comp = ()=> {
-			this.appPixi.ticker?.remove(fncRender);
-				// transなしでもadd()してなくても走るが、構わないっぽい。
-			[this.#fore, this.#back] = [this.#back, this.#fore];
-			const aPrm: Promise<void>[] = [];
-			for (const [ln, pg] of Object.entries(this.#hPages)) {
-				if (hTarget[ln]) {pg.transPage(aPrm); continue}
 
-				// transしないために交換する
-				const {fore: {spLay: f}, back: {spLay: b}} = pg;
-				const idx = this.#fore.getChildIndex(b);
-				this.#fore.removeChild(b);
-				this.#back.removeChild(f);
-				this.#fore.addChildAt(f, idx);
-				this.#back.addChildAt(b, idx);
-			}
-			Promise.allSettled(aPrm);
-
-			this.#fore.visible = true;
-			this.#back.visible = false;
-			this.#spTransBack.visible = false;
-			this.#spTransFore.visible = false;
+		const comp2 = ()=> {
+			this.appPixi.ticker.remove(fncRender);
+			comp();
 		};
-		const time = argChk_Num(hArg, 'time', 0);
-//		hArg[':id'] = pg.fore.name.slice(0, -7);
-//		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
-		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
+
 
 		// クロスフェード
-		const {glsl, rule, chain} = hArg;
-		if (! glsl && ! rule) {
+		const {vert, frag, rule, chain} = hArg;	//TODO: マニュアル更新
+		if (! rule) {
 			this.#spTransFore.filters = [];
-			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp, ()=> {});
+			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
 			this.appPixi.ticker.add(fncRender);
 			return false;
 		}
 
-		// ルール画像、またはGLSL
-		const flt = glsl
-			? new Filter(undefined, glsl, this.#ufRuleTrans)
-			: this.#fltRule;
-		flt.uniforms.vague = argChk_Num(hArg, 'vague', 0.04);
-		flt.uniforms.tick = 0;
-		this.#spTransFore.filters = [flt];
-		if (glsl) {
-			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.uniforms, {tick: 1}, ()=> {}, comp, ()=> {});
+		// GLSL
+		const vague	= argChk_Num(hArg, 'vague', 0.04);
+console.log(`fn:LayerMng.ts rule:${rule} frag=${frag}=`);
+		if (vert && frag) {
+			const flt = new Filter({
+				glProgram	: new GlProgram({
+					vertex	: vert,
+					fragment: frag,
+				}),
+				resources	: {
+					timeUniforms: {
+						vague	: {type: 'f32', value: vague},
+						tick	: {type: 'f32', value: 0},
+					},
+				},
+			});
+			this.#spTransFore.filters = [flt];
+
+			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
 			this.appPixi.ticker.add(fncRender);
 			return false;
 		}
+		if (vert || frag) throw 'vertex と frag は同時に指定して下さい';
 
-		if (! rule) throw 'ruleが指定されていません';
-		const tw = CmnTween.tweenA(CmnTween.TW_INT_TRANS, hArg, flt.uniforms, {tick: 1}, ()=> {}, comp, ()=> {});
+		// ルール画像
 		this.#sps.destroy();
-		this.#sps = new SpritesMng(rule, undefined, sp=> {
-			flt.uniforms.rule = sp.texture;
+		this.#sps = new SpritesMng(rule, undefined, async sp=> {
+//		this.#sps = new SpritesMng(rule, undefined, sp=> {
+			const flt = new Filter({
+				glProgram	: new GlProgram({
+					vertex	: LayerMng.#glslRuleTransVert,
+					fragment: LayerMng.#glslRuleTransFrag,
+				}),
+				resources	: {
+					rule	: sp.texture.source,
+					timeUniforms: {
+						vague	: {type: 'f32', value: vague},
+						tick	: {type: 'f32', value: 0},
+					},
+				},
+			});
+//			this.#spTransFore.filters = [flt];
+
+			// === fore back の板を正しく作れてない
+			const t = await Assets.load('prj/bg/yun_1317.jpg');
+			const s = Sprite.from(t);
+			s.filters = [flt];
+			this.#stage.addChild(s);
+
+			const tw = CmnTween.tweenA(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
 			sp.destroy();
 
 			CmnTween.tweenB(chain, tw);
@@ -790,7 +890,7 @@ void main(void) {
 		if (this.#evtMng.isSkipping) return false;
 
 		const {layer} = hArg;
-		const aDo: DisplayObject[] = [];
+		const aDo: Container[] = [];
 		for (const ln of this.#getLayers(layer)) {
 			aDo.push(this.#hPages[ln].fore.spLay);
 		}
@@ -798,9 +898,8 @@ void main(void) {
 			// NOTE: スマホ回転対応が要るかも？
 		const fncRender = ()=> {
 			this.#fore.visible = true;
-			for (const lay of aDo) this.appPixi.renderer.render(
-				lay, {renderTexture: this.#rtTransFore, clear: false}
-			);
+			const {renderer} = this.appPixi;
+			for (const lay of aDo) renderer.render({container: lay, target: this.#rtTransFore, clear: false});
 			this.#fore.visible = false;
 		};
 		this.#spTransFore.visible = true;
@@ -884,7 +983,11 @@ void main(void) {
 	#add_filter2(l: Layer, hArg: HArg) {
 		const s = l.spLay;
 		s.filters ??= [];
-		s.filters = [...s.filters, Layer.bldFilters(hArg)];
+		s.filters = [
+			...s.filters instanceof Array ?s.filters :[s.filters],
+			Layer.bldFilters(hArg)
+		];
+//		s.filters = [...s.filters, Layer.bldFilters(hArg)];
 		l.aFltHArg.push(hArg);
 	}
 
@@ -895,14 +998,14 @@ void main(void) {
 			if (hArg.page === 'both') {	// page=both で両面に
 				const f = pg.fore;
 				const b = pg.back;
-				f.spLay.filters = null;
-				b.spLay.filters = null;
+				f.spLay.filters = [];
+				b.spLay.filters = [];
 				f.aFltHArg = [];
 				b.aFltHArg = [];
 				return;
 			}
 			const l = pg.getPage(hArg);
-			l.spLay.filters = null;
+			l.spLay.filters = [];
 			l.aFltHArg = [];
 		});
 
@@ -926,14 +1029,16 @@ void main(void) {
 	}
 	#enable_filter2(l: Layer, hArg: HArg) {
 		const s = l.spLay;
-		if (! s.filters) throw 'フィルターがありません';
+		const a = s.filters instanceof Array ?s.filters :[s.filters];
+		const len = a.length;
+		if (len === 0) throw 'フィルターがありません';
 
 		const i = uint(argChk_Num(hArg, 'index', 0));
-		const len = s.filters.length;
 		if (len <= i) throw `フィルターの個数（${len}）を越えています`;
 
 		l.aFltHArg[i].enabled =
-		s.filters[i].enabled = argChk_Boolean(hArg, 'enabled', true);
+		a[i].enabled =
+		argChk_Boolean(hArg, 'enabled', true);
 	}
 
 

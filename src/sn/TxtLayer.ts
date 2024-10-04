@@ -21,7 +21,7 @@ import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {enableEvent, disableEvent} from './ReadState';
 import {ScriptIterator} from './ScriptIterator';
 
-import {Sprite, DisplayObject, Graphics, Container, Renderer, Application} from 'pixi.js';
+import {Sprite, Graphics, Container, Renderer, Application, Color} from 'pixi.js';
 
 
 export class TxtLayer extends Layer {
@@ -185,7 +185,7 @@ export class TxtLayer extends Layer {
 	#b_color			= 0x000000;
 	#b_alpha			= 0;
 	#b_alpha_isfixed	= false;
-	#b_do			: DisplayObject | undefined	= undefined;
+	#b_do			: Container | undefined	= undefined;
 	#b_pic			= '';	// 背景画像無し（＝単色塗り）
 
 	// 文字表示
@@ -214,7 +214,7 @@ export class TxtLayer extends Layer {
 		this.#rbSpl.init(this.#putCh);
 
 		this.spLay.addChild(this.#cntBtn);	// ボタンはpaddingの影響を受けない
-		this.#cntBtn.name = 'cntBtn';
+		this.#cntBtn.label = 'cntBtn';
 
 		const padding = 16;	// 初期padding
 		this.lay({style: `width: ${CmnLib.stageW}px; height: ${CmnLib.stageH}px; font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', '游ゴシック Medium', meiryo, sans-serif; color: white; font-size: 24px; line-height: 1.5; padding: ${padding}px;`, in_style: 'default', out_style: 'default', back_clear: 'true'});
@@ -231,7 +231,7 @@ export class TxtLayer extends Layer {
 
 		TxtLayer.#rec = tx=> tx;
 	}
-	override set name(nm: string) {this.name_ = nm; this.#txs.name = nm}
+	override set name(nm: string) {this.name_ = nm; this.#txs.label = nm}
 	override get name() {return this.name_}	// getは継承しないらしい
 
 
@@ -342,7 +342,7 @@ export class TxtLayer extends Layer {
 				//this.#sps.destroy();	// Graphics かもなので使用不可
 				this.#sps = new SpritesMng(this.#b_pic, this.spLay, sp=> {
 					this.#b_do = sp;
-					sp.name = 'back(pic)';
+					sp.label = 'back(pic)';
 					sp.visible = (alpha > 0);
 					sp.alpha = alpha;
 					//CmnLib.adjustRetinaSize(this.b_pic, sp);
@@ -364,11 +364,12 @@ export class TxtLayer extends Layer {
 			this.#b_pic = '';	// 忘れずクリア
 			this.spLay.addChildAt(
 				(this.#b_do = new Graphics)
-				.beginFill(this.#b_color)
-				.lineStyle(undefined)
-				.drawRect(0, 0, this.#txs.getWidth, this.#txs.getHeight)
-				.endFill(), 0);
-			this.#b_do.name = 'back(color)';
+				.rect(0, 0, this.#txs.getWidth, this.#txs.getHeight)
+				.fill(this.#b_color)
+				.stroke(),
+				0
+			);
+			this.#b_do.label = 'back(color)';
 			//cacheAsBitmap = true;	// これを有効にするとスナップショットが撮れない？？
 		}
 
@@ -393,11 +394,12 @@ export class TxtLayer extends Layer {
 			}
 			this.spLay.addChildAt(
 				(this.#b_do = new Graphics)
-				.beginFill(this.#b_color)
-				.lineStyle(undefined)
-				.drawRect(0, 0, this.#txs.getWidth, this.#txs.getHeight)
-				.endFill(), 0);
-			this.#b_do.name = 'back(color)';
+				.rect(0, 0, this.#txs.getWidth, this.#txs.getHeight)
+				.fill(new Color(this.#b_color))
+				.stroke(),
+				0
+			);
+			this.#b_do.label = 'back(color)';
 			//cacheAsBitmap = true;	// これを有効にするとスナップショットが撮れない？？
 		}
 		if (this.#b_do) {
@@ -777,7 +779,7 @@ export class TxtLayer extends Layer {
 		hArg[':id_tag'] = hArg.key.slice(0, -7);	// Design用
 		argChk_Boolean(hArg, 'hint_tate', this.#txs.tategaki);	// hint用
 		const btn = new Button(hArg, TxtLayer.#evtMng, ()=> re(), ()=> this.canFocus());
-		btn.name = JSON.stringify(hArg).replaceAll('"', "'");// playback時に使用
+		btn.label = JSON.stringify(hArg).replaceAll('"', "'");// playback時に使用
 		this.#cntBtn.addChild(btn);
 	});
 	canFocus(): boolean {
@@ -812,7 +814,7 @@ export class TxtLayer extends Layer {
 		txs		: this.#txs.record(),
 		strNoFFS: this.#strNoFFS,
 
-		btns	: this.#cntBtn.children.map(b=> b.name),
+		btns	: this.#cntBtn.children.map(b=> b.label),
 	}};
 	override playback(hLay: any, aPrm: Promise<void>[]): void {
 		super.playback(hLay, aPrm);
@@ -851,7 +853,7 @@ export class TxtLayer extends Layer {
 	set cssText(ct: string) {this.#txs.cssText = ct}
 
 	override snapshot(rnd: Renderer, re: ()=> void) {
-		rnd.render(this.spLay, {clear: false});
+		rnd.render({container: this.spLay, clear: false});
 		this.#txs.snapshot(rnd, re);
 	}
 	override snapshot_end() {this.#txs.snapshot_end()}
@@ -884,9 +886,9 @@ export class TxtLayer extends Layer {
 						(e instanceof Container) ?'Container' :'?'
 					)
 				)
-			}", "name":"${e.name}", "alpha":${e.alpha}, "x":${e.x}, "y":${e.y}, "visible":"${e.visible}"}`).join(',')
+			}", "label":"${e.label}", "alpha":${e.alpha}, "x":${e.x}, "y":${e.y}, "visible":"${e.visible}"}`).join(',')
 		}], "button":[${
-			this.#cntBtn.children.map(b=> b.children[0]?.name ?? '{}').join(',')
+			this.#cntBtn.children.map(b=> b.children[0]?.label ?? '{}').join(',')
 		}]`;
 	}
 

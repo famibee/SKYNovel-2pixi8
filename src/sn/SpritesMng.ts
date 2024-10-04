@@ -5,16 +5,16 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {Sprite, Container, Texture, AnimatedSprite, LoaderResource, utils, Loader, Rectangle, BLEND_MODES} from 'pixi.js';
 import {Config} from './Config';
-import {IEvtMng, argChk_Boolean, argChk_Num, getFn, int} from './CmnLib';
-import {IMain, IVariable, SYS_DEC_RET} from './CmnInterface';
-import {DebugMng} from './DebugMng';
+import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import {IMain, IVariable} from './CmnInterface';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {SysBase} from './SysBase';
 import {SoundMng} from './SoundMng';
 import {HArg} from './Grammar';
 import {Layer} from './Layer';
+
+import {AnimatedSprite, BLEND_MODES, Container, Sprite, Texture, Assets} from 'pixi.js';
 
 type IFncCompSpr = (sp: Sprite)=> void;
 
@@ -22,7 +22,7 @@ interface Iface {
 	fn			: string;
 	dx			: number;
 	dy			: number;
-	blendmode	: number;
+	blendmode	: BLEND_MODES;
 };
 interface Ihface { [name: string]: Iface; };
 
@@ -36,19 +36,21 @@ interface IResAniSpr {
 
 export class SpritesMng {
 	static	#cfg	: Config;
-	static	#val	: IVariable;
-	static	#sys	: SysBase;
-	static	#main	: IMain;
-	static	init(cfg: Config, val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
+	// static	#val	: IVariable;
+	// static	#sys	: SysBase;
+	// static	#main	: IMain;
+	static	init(cfg: Config, _val: IVariable, _sys: SysBase, _main: IMain, sndMng: SoundMng) {
+//	static	init(cfg: Config, val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
 		SpritesMng.#cfg = cfg;
-		SpritesMng.#val = val;
-		SpritesMng.#sys = sys;
-		SpritesMng.#main = main;
+		// SpritesMng.#val = val;
+		// SpritesMng.#sys = sys;
+		// SpritesMng.#main = main;
+/*
 		if (sys.crypto) {
 			SpritesMng.#cachePicMov = SpritesMng.#dec2cachePicMov;
 			SpritesMng.#cacheAniSpr = SpritesMng.#dec2cacheAniSpr;
 		}
-
+*/
 		const fnc = ()=> {
 			const vol = SpritesMng.#glbVol * SpritesMng.#movVol;
 			for (const v of Object.values(SpritesMng.#hFn2VElm)) v.volume = vol;
@@ -86,7 +88,7 @@ export class SpritesMng {
 		this.#addChild		= sp=> sp.destroy();
 
 		this.#aSp.forEach(sp=> {
-			SpritesMng.stopVideo(sp.name);
+			SpritesMng.stopVideo(sp.label);
 			sp.parent?.removeChild(sp);
 			sp.destroy();
 		});
@@ -105,19 +107,53 @@ export class SpritesMng {
 	static #csv2Sprites(csv: string, fncFirstComp: IFncCompSpr, fncAllComp: (isStop: boolean)=> void, addChild: (sp: Sprite)=> void): boolean {
 		// Data URI
 		let needLoad = false;
-		if (csv.slice(0, 5) === 'data:') {
-			const fnc = ()=> {
-				const sp = Sprite.from(csv);
+		if (csv.startsWith('data:')) {
+			needLoad = ! Assets.cache.has(csv);
+			Assets.load({
+				alias	: csv,
+				src		: SpritesMng.#cfg.searchPath(csv, SEARCH_PATH_ARG_EXT.SP_GSM),
+			}).then(tx=> {
+				const sp = Sprite.from(tx);
 				addChild(sp);
 				fncFirstComp(sp);
 				fncAllComp(needLoad);
-			};
-			if (csv in utils.TextureCache) fnc();
-			else {needLoad = true; (new Loader).add(csv, csv).load(fnc)}
-
+			});
 			return needLoad;
 		}
 
+		const a = csv.split(',');
+		if (a.length === 0) return false;
+
+		a.forEach(fn=> {
+			if (! Assets.cache.has(fn)) needLoad = true;
+			Assets.add({alias: fn, src: SpritesMng.#cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SP_GSM)});
+		});
+		Assets.load(a).then(()=> {
+			a.forEach((fn0, i)=> {
+				// 差分絵を重ねる
+				const {dx, dy, blendmode, fn} = SpritesMng.#hFace[fn0] ?? {
+					fn	: fn0,
+					dx	: 0,
+					dy	: 0,
+					blendmode	: 'normal',
+				};
+				const sp = SpritesMng.#mkSprite(fn);
+				sp.label = fn;	// 4 Debug?
+				addChild(sp);
+				if (i === 0) fncFirstComp(sp); else {
+					sp.x = dx;
+					sp.y = dy;
+					sp.blendMode = blendmode;
+				};
+			});
+			fncAllComp(needLoad);
+
+//			if (fn in SpritesMng.#hFn2ResAniSpr) {}
+			
+		});
+
+// TODO: とりあえずの仮
+/*
 		const aComp: {fn: string, fnc: IFncCompSpr}[] = [];
 		const ldr = new Loader;
 		csv.split(',').forEach((fn0, i)=> {
@@ -128,7 +164,7 @@ export class SpritesMng {
 				fn	: fn0,
 				dx	: 0,
 				dy	: 0,
-				blendmode	: BLEND_MODES.NORMAL
+				blendmode	: 'normal'
 			};
 			const fnc = (i === 0) ?fncFirstComp :(sp: Sprite)=> {
 				sp.x = dx;
@@ -138,14 +174,14 @@ export class SpritesMng {
 			aComp.push({fn, fnc});
 
 			if (fn in SpritesMng.#hFn2ResAniSpr) return;
-			if (fn in utils.TextureCache) return;
-			//if (fn in utils.BaseTextureCache) return;		// 警告に変化なし
-			if (fn in Loader.shared.resources) return;
+//			if (fn in TextureCache) return;
+			//if (fn in BaseTextureCache) return;		// 警告に変化なし
+//			if (fn in Loader.shared.resources) return;
 			//if (fn in SpritesMng.#ldrHFn) {
 				// ここに来るという中途半端な状態がある。お陰で警告が出てしまう
 				// （警告を消そうとする）以下の試みは効かない。直前の if でそもそもここに来ない
 				//	Texture.removeFromCache(fn);
-				//	delete utils.TextureCache[fn];
+				//	delete TextureCache[fn];
 				//	delete Loader.shared.resources[fn];
 				// return;	// これは厳禁、御法度。
 					// 画像ボタンや文字ボタン背景で同じ画像を、間を置かずロードした場合に最初一つしか表示されなくなる。以下は確認用ギャラリー
@@ -166,7 +202,7 @@ export class SpritesMng {
 		const fncLoaded = (_: any, hRes: {[fn: string]: LoaderResource})=> {
 			for (const {fn, fnc} of aComp) {
 				const sp = SpritesMng.#mkSprite(fn, hRes);
-				sp.name = fn;	// 4 Debug?
+				sp.label = fn;	// 4 Debug?
 				addChild(sp);
 				fnc(sp);
 			}
@@ -192,6 +228,7 @@ export class SpritesMng {
 			.load(fncLoaded);
 		}
 		else fncLoaded(0, {});
+*/
 
 		return needLoad;
 	}
@@ -199,6 +236,7 @@ export class SpritesMng {
 	static	#hFn2ResAniSpr	: {[fn: string]: IResAniSpr} = {};
 
 
+/*
 	static #cachePicMov = (_r: SYS_DEC_RET, {type, name, data}: any, next: ()=> void)=> {
 		switch (type) {
 			case LoaderResource.TYPE.VIDEO:
@@ -227,7 +265,7 @@ export class SpritesMng {
 			// res.texture = Texture.from(r);
 				// でも良いが、キャッシュ追加と、それでcsv2Sprites()内で使用するので
 			res.type = LoaderResource.TYPE.IMAGE;
-//			URL.revokeObjectURL(r.src);	// TODO: キャッシュ破棄
+//			URL.revokeObjectURL(r.src);
 		}
 		else if (r instanceof HTMLVideoElement) {
 			r.volume = SpritesMng.#glbVol;
@@ -301,8 +339,9 @@ export class SpritesMng {
 			next();
 		});
 	}
+*/
 
-	static #mkSprite(fn: string, hRes: {[fn: string]: LoaderResource}): Sprite {
+	static #mkSprite(fn: string): Sprite {
 		const ras = SpritesMng.#hFn2ResAniSpr[fn];
 		if (ras) {
 			const asp = new AnimatedSprite(ras.aTex);
@@ -310,10 +349,10 @@ export class SpritesMng {
 			asp.play();
 			return asp;
 		}
-		if (fn in utils.TextureCache) return Sprite.from(fn);
 		if (fn in SpritesMng.#hFn2VElm) return Sprite.from(SpritesMng.#hFn2VElm[fn]);
 
-		return (fn in hRes) ?new Sprite(hRes[fn].texture) :new Sprite;
+		const tx: Texture | undefined = Assets.get(fn);
+		return tx ?Sprite.from(tx) :new Sprite;
 	}
 	static #hFn2VElm	: {[fn: string]: HTMLVideoElement} = {};
 	static	getHFn2VElm(fn: string) {return SpritesMng.#hFn2VElm[fn]}

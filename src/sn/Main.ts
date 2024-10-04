@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, argChk_Boolean, parseColor} from './CmnLib';
+import {CmnLib, argChk_Boolean} from './CmnLib';
 import {IHTag, HArg} from './Grammar';
 import {IMain} from './CmnInterface';
 import {Config} from './Config';
@@ -20,7 +20,7 @@ import {EventMng} from './EventMng';
 import {ScriptIterator} from './ScriptIterator';
 
 import {SysBase} from './SysBase';
-import {Application, IApplicationOptions, utils} from 'pixi.js';
+import {Application, Assets, Color} from 'pixi.js';
 
 export class Main implements IMain {
 	#cfg		: Config;
@@ -44,38 +44,38 @@ export class Main implements IMain {
 
 	#inited = false;
 	constructor(private readonly sys: SysBase) {
-		utils.skipHello();
-
 		Config.generate(sys)
-		.then(c=> this.#cfg = c)
-		.then(()=> this.#init())
+		.then(c=> this.#init(c))
 		.catch(e=> console.error(`load err fn:prj.json e:%o`, e));
 	}
 	readonly	#SN_ID	= 'skynovel';
-	async #init() {
+	async #init(c: Config) {
+		this.#cfg = c;
+
 		const cc = document.createElement('canvas')?.getContext('2d');
-		if (! cc) throw 'argChk_Color err';
+		if (! cc) throw '#init err';
 		CmnLib.cc4ColorName = cc;
-		const hApp: IApplicationOptions = {
+
+		const cvs = document.getElementById(this.#SN_ID) as HTMLCanvasElement;
+		if (cvs) cvs.id = '';
+
+		await (this.#appPixi = new Application).init({
 			width			: this.#cfg.oCfg.window.width,
 			height			: this.#cfg.oCfg.window.height,
-			backgroundColor	: parseColor(String(this.#cfg.oCfg.init.bg_color)),
-				// このString()は後方互換性のため必須
-		//	resolution		: sys.resolution,
-			resolution		: globalThis.devicePixelRatio ?? 1,	// 理想
-		};
-		const cvs = document.getElementById(this.#SN_ID) as HTMLCanvasElement;
+			backgroundColor	: new Color(this.#cfg.oCfg.init.bg_color),
+			hello: true,	// webgl モードかが DevTools に出る
+	//		preference: 'webgpu',	// 優先指定
+			preference: 'webgl',	// 優先指定
+		});
+		Main.cvs = this.#appPixi.canvas;
+		Main.cvs.id = this.#SN_ID;
+		document.body.appendChild(Main.cvs);
+
 		if (cvs) {
-			this.#clone_cvs = cvs.cloneNode(true) as HTMLCanvasElement;
-			this.#clone_cvs.id = this.#SN_ID;
-			hApp.view = cvs;
+			Main.cvs.className = cvs.className;
+			Main.cvs.style.cssText = cvs.style.cssText;
 		}
-		this.#appPixi = new Application(hApp);
-		Main.cvs = this.#appPixi.view;
-		if (! cvs) {
-			document.body.appendChild(Main.cvs);
-			Main.cvs.id = this.#SN_ID;
-		}
+
 
 		// 変数
 		this.#val = new Variable(this.#cfg, this.#hTag);
@@ -268,7 +268,7 @@ export class Main implements IMain {
 				// The node before which the new node is to be inserted is not a child of this node.
 			Main.cvs.parentNode!.appendChild(this.#clone_cvs);
 		}
-		utils.clearTextureCache();
+		Assets.cache.reset();
 		this.#appPixi.destroy(true);
 		this.sys.destroy();
 	}

@@ -20,7 +20,7 @@ export interface IPropParser {
 
 
 // =============== Plugin
-import {DisplayObject, RenderTexture} from 'pixi.js';
+import {Container, RenderTexture} from 'pixi.js';
 export type PLUGIN_DECAB_RET = {
 	ext_num	: number;
 	ab		: ArrayBuffer;
@@ -38,7 +38,7 @@ export type IPluginInitArg = {
 	searchPath(fn: string, extptn?: string): string;
 	getVal(arg_name: string, def?: number | string): object;
 	resume(fnc?: ()=> void): void;
-	render(dsp: DisplayObject, renTx?: RenderTexture, clear?: boolean): void;
+	render(dsp: Container, renTx?: RenderTexture, clear?: boolean): void;
 	setDec(fnc: (ext: string, tx: string)=> Promise<string>): void;
 	setDecAB(fnc: (ab: ArrayBuffer)=> Promise<PLUGIN_DECAB_RET>): void;
 	setEnc(fnc: (tx: string)=> Promise<string>): void;

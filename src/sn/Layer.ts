@@ -9,15 +9,15 @@ import {CmnLib, int, argChk_Boolean, argChk_Num, uint} from './CmnLib';
 import {HArg} from './Grammar';
 import {IMakeDesignCast} from './LayerMng';
 
-import {BLEND_MODES, DisplayObject, Container, Sprite, Texture, AbstractRenderer, filters, Filter} from 'pixi.js';
-const {BlurFilter, ColorMatrixFilter, NoiseFilter} = filters;
+import {BLEND_MODES, Container, Sprite, BlurFilter, ColorMatrixFilter, NoiseFilter, Filter, Renderer} from 'pixi.js';
 
 export class Layer {
 				layname	= '';
 	protected	name_	= '';
 	set name(nm) {this.name_ = nm}
 	get name() {return this.name_}
-	readonly	spLay	= new Sprite(Texture.EMPTY);
+	readonly	spLay	= new Container;
+//	readonly	spLay	= new Sprite(Texture.EMPTY);
 
 	// tsy用
 	get	alpha() {return this.spLay.alpha}
@@ -92,13 +92,15 @@ export class Layer {
 	}
 	// https://github.com/pixijs/filters
 	static	readonly	hBldFilter: {[nm: string]: (hArg: HArg)=> Filter} = {
-		// https://pixijs.download/v6.5.10/docs/PIXI.filters.BlurFilter.html
 		blur: hArg=> {	// ガウスぼかし
-			const f = new BlurFilter(
-				argChk_Num(hArg, 'strength', 8),	// 強さ
-				argChk_Num(hArg, 'quality', 4),		// 品質
-				'resolution' in hArg ?argChk_Num(hArg, 'resolution', 0) :undefined,							// 解像度
-				argChk_Num(hArg, 'kernel_size', 5),	// カーネルサイズ。値は 5、7、9、11、13、15。
+			const f = new BlurFilter({
+				kernelSize	:	argChk_Num(hArg, 'kernel_size', 5),	// カーネルサイズ。値は 5、7、9、11、13、15。
+				quality		:	argChk_Num(hArg, 'quality', 4),		// 品質
+				strength	: 	argChk_Num(hArg, 'strength', 8),	// 強さ
+				strengthX	:	argChk_Num(hArg, 'strengthX', 8),
+				strengthY	:	argChk_Num(hArg, 'strengthY', 8),
+			}
+//				'resolution' in hArg ?argChk_Num(hArg, 'resolution', 0) :undefined,							// 解像度
 			);
 			f.blurX = uint(argChk_Num(hArg, 'blur_x', 2));	// X強度
 			f.blurY = uint(argChk_Num(hArg, 'blur_y', 2));	// Y強度
@@ -109,12 +111,12 @@ export class Layer {
 		},
 
 		// https://pixijs.download/v6.5.10/docs/PIXI.filters.NoiseFilter.html
-		noise: hArg=> new NoiseFilter(	// ノイズエフェクト
-			argChk_Num(hArg, 'noise', 0.5),
+		noise: hArg=> new NoiseFilter({	// ノイズエフェクト
+			noise: argChk_Num(hArg, 'noise', 0.5),
 				// 適用するノイズの量。この値は (0, 1] の範囲内
-			'seed' in hArg ?argChk_Num(hArg, 'seed', 0) :undefined,
+			seed: 'seed' in hArg ?argChk_Num(hArg, 'seed', 0) :undefined,
 				// ランダム ノイズの生成に適用するシード値。 Math.random() を使用するのが適切な値です。
-		),
+		}),
 
 		// https://pixijs.download/v6.5.10/docs/PIXI.filters.ColorMatrixFilter.html
 		color_matrix: hArg=> {	// カラーマトリックス
@@ -338,37 +340,55 @@ export class Layer {
 		}
 	}
 
-	static getBlendmodeNum(bm_name: string): number {
-		if (! bm_name) return BLEND_MODES.NORMAL;	// 省略時にデフォルトを返す
+	static getBlendmodeNum(bm_name: string): BLEND_MODES {
+		if (! bm_name) return 'normal';	// 省略時にデフォルトを返す
 
 		const bmn = Layer.#hBlendmode[bm_name];
 		if (bmn !== undefined) return bmn;
 		throw `${bm_name} はサポートされない blendmode です`;
 	}
-	static	readonly	#hBlendmode: {[bm_name: string]: number} = {
-		'normal'		: BLEND_MODES.NORMAL,
-		'add'			: BLEND_MODES.ADD,
-		'multiply'		: BLEND_MODES.MULTIPLY,
-		'screen'		: BLEND_MODES.SCREEN,
-/*
-		'overlay'		: BLEND_MODES.OVERLAY,
-		'darken'		: BLEND_MODES.DARKEN,
-		'lighten'		: BLEND_MODES.LIGHTEN,
-		'color_dodge'	: BLEND_MODES.COLOR_DODGE,
-		'color_burn'	: BLEND_MODES.COLOR_BURN,
-		'hard_light'	: BLEND_MODES.HARD_LIGHT,
-		'soft_light'	: BLEND_MODES.SOFT_LIGHT,
-		'difference'	: BLEND_MODES.DIFFERENCE,
-		'exclusion'		: BLEND_MODES.EXCLUSION,
-		'hue'			: BLEND_MODES.HUE,
-		'saturation'	: BLEND_MODES.SATURATION,
-		'color'			: BLEND_MODES.COLOR,
-		'luminosity'	: BLEND_MODES.LUMINOSITY,
+	static	readonly	#hBlendmode: {[bm_name: string]: BLEND_MODES} = {
+	//	'inherit'
+		'normal'		: 'normal',
+		'add'			: 'add',
+		'multiply'		: 'multiply',
+		'screen'		: 'screen',
+		'darken'		: 'darken',
+		'lighten'		: 'lighten',
+		'erase'			: 'erase',
+		'color_dodge'	: 'color-dodge',
+		'color_burn'	: 'color-burn',
+	//	'linear-burn'
+	//	'linear-dodge'
+	//	'linear-light'
+		'hard_light'	: 'hard-light',
+		'soft_light'	: 'soft-light',
+	//	'pin-light'
+		'difference'	: 'difference',
+		'exclusion'		: 'exclusion',
+		'overlay'		: 'overlay',
+		'saturation'	: 'saturation',
+		'color'			: 'color',
+		'luminosity'	: 'luminosity',
+		'normal_npm'	: 'normal-npm',
+		'add_npm'		: 'add-npm',
+		'screen_npm'	: 'screen-npm',
+		'none'			: 'none',
+		'subtract'		: 'subtract',
+	//	'divide'
+	//	'vivid-light'
+	//	'hard-mix'
+	//	'negation'
+	//	'min'
+	//	'max'
+		//TODO: 仮
 
-		'normal_npm'	: BLEND_MODES.NORMAL_NPM,
-		'add_npm'		: BLEND_MODES.ADD_NPM,
-		'screen_npm'	: BLEND_MODES.SCREEN_NPM,
-		'none'			: BLEND_MODES.NONE,
+
+//	export type BLEND_MODES = 'inherit' | 'normal' | 'add' | 'multiply' | 'screen' | 'darken' | 'lighten' | 'erase' | 'color-dodge' | 'color-burn' | 'linear-burn' | 'linear-dodge' | 'linear-light' | 'hard-light' | 'soft-light' | 'pin-light' | 'difference' | 'exclusion' | 'overlay' | 'saturation' | 'color' | 'luminosity' | 'normal-npm' | 'add-npm' | 'screen-npm' | 'none' | 'subtract' | 'divide' | 'vivid-light' | 'hard-mix' | 'negation' | 'min' | 'max';
+		// いくつか未サポートなので、文字列置換か blendmode 文字を変更するか
+/*
+
+		'hue'			: BLEND_MODES.HUE,
 		'src_in'		: BLEND_MODES.SRC_IN,
 		'src_out'		: BLEND_MODES.SRC_OUT,
 		'src_atop'		: BLEND_MODES.SRC_ATOP,
@@ -376,11 +396,9 @@ export class Layer {
 		'dst_in'		: BLEND_MODES.DST_IN,
 		'dst_out'		: BLEND_MODES.DST_OUT,
 		'dst_atop'		: BLEND_MODES.DST_ATOP,
-		'subtract'		: BLEND_MODES.SUBTRACT,
-		'src_over'		: BLEND_MODES.SRC_OVER,
-		'erase'			: BLEND_MODES.ERASE,
-		'xor'			: BLEND_MODES.XOR,
 */
+//		'src_over'		: BLEND_MODES.SRC_OVER,
+//		'xor'			: BLEND_MODES.XOR,
 	};
 	static getNum2Blendmode(bmn: number): string {
 		return Layer.#hNum2Blendmode[bmn] ?? 'normal';
@@ -390,7 +408,7 @@ export class Layer {
 		1	/* ADD */			: 'add',
 		2	/* MULTIPLY */		: 'multiply',
 		3	/* SCREEN */		: 'screen',
-	}
+	}		//TODO: 仮
 
 	// アニメ・動画があるか
 	get containMovement(): boolean {return false}
@@ -400,13 +418,13 @@ export class Layer {
 
 	clearLay(hArg: HArg): void {
 		this.spLay.alpha = 1;
-		this.spLay.blendMode = BLEND_MODES.NORMAL;
+		this.spLay.blendMode = 'normal';
 		// visibleは触らない
 		this.spLay.pivot.set(0, 0);
 		this.spLay.angle = 0;
 		this.spLay.scale.set(1, 1);
 		if (argChk_Boolean(hArg, 'clear_filter', false)) {
-			this.spLay.filters = null;
+			this.spLay.filters = [];
 			this.aFltHArg = [];
 		}
 		//transform.colorTransform = nulColTrfm;
@@ -433,7 +451,7 @@ export class Layer {
 	}}
 	playback(hLay: any, _aPrm: Promise<void>[]): void {
 		this.name = hLay.name;
-		//idx	// コール順に意味があるので親でやる
+		//idx	// コール順に意味があるので LayerMng でやる
 
 		this.clearLay({clear_filter: true});
 		this.spLay.alpha = hLay.alpha;
@@ -445,13 +463,11 @@ export class Layer {
 		this.spLay.visible = hLay.visible;
 
 		this.aFltHArg = hLay.aFltHArg ?? [];
-		this.spLay.filters = (this.aFltHArg.length === 0)
-			? null
-			: this.aFltHArg.map(f=> Layer.bldFilters(f));
+		this.spLay.filters = this.aFltHArg.map(f=> Layer.bldFilters(f));
 	}
 
-	snapshot(rnd: AbstractRenderer, re: ()=> void) {
-		rnd.render(this.spLay, {clear: false});
+	snapshot(rnd: Renderer, re: ()=> void) {
+		rnd.render({container: this.spLay, clear: false});
 		re();
 	}
 	snapshot_end() {}
@@ -470,13 +486,13 @@ export class Layer {
 		}, "visible":"${this.spLay.visible
 		}", "left":${this.spLay.x}, "top":${this.spLay.y
 		}, "alpha":${this.spLay.alpha}, "rotation":${this.spLay.angle
-//		}, "blendMode":${this.spLay.blendMode
+		}, "blendMode":${this.spLay.blendMode
 		}, "name":"${this.name_}", "scale_x":${this.spLay.scale.x
 		}, "scale_y":${this.spLay.scale.y
 		}, "filters": [${this.aFltHArg.map(f=> `"${f.filter}"`).join(',')}]`;
 	}
 
-	static	setXY(base: DisplayObject, hArg: HArg, ret: Container, isGrp = false, isButton = false): void {
+	static	setXY(base: Container, hArg: HArg, ret: Container, isGrp = false, isButton = false): void {
 		if (hArg.pos) {Layer.setXYByPos(base, hArg.pos, ret); return}
 
 		const rct_base = base.getBounds();
@@ -552,7 +568,7 @@ export class Layer {
 		}
 	}
 
-	static	setXYByPos(base: DisplayObject, pos: string, ret: DisplayObject): void {
+	static	setXYByPos(base: Container, pos: string, ret: Container): void {
 		if (pos === 'stay') return;
 		if (base === undefined) throw 'setXYByPos base === undefined';
 		if (ret === undefined) throw 'setXYByPos result === undefined';
@@ -576,7 +592,7 @@ export class Layer {
 		if (ret.scale.y < 0) ret.y += b_height;
 	}
 
-	static	setXYCenter(dsp: DisplayObject): void {
+	static	setXYCenter(dsp: Container): void {
 		const rct = dsp.getBounds();
 		dsp.x = (CmnLib.stageW - rct.width) *0.5;
 		dsp.y = (CmnLib.stageH - rct.height) *0.5;

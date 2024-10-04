@@ -12,7 +12,7 @@ import {IVariable, IMain, IData4Vari, HPlugin, HSysBaseArg} from './CmnInterface
 import {Main} from './Main';
 
 import store from 'store';
-import {Application} from 'pixi.js';
+import {Application, Assets} from 'pixi.js';
 import 'devtools-detect';
 import {IFn2Path, IConfig} from './ConfigBase';
 
@@ -24,6 +24,8 @@ export class SysWeb extends SysBase {
 
 		const a = arg.cur.split('/');
 		this.#path_base = (a.length > 2) ? a.slice(0, -2).join('/') +'/' :'';
+
+		Assets.init({basePath: location.origin});
 
 		globalThis.onload = async ()=> this.loaded(hPlg, arg);
 	}
@@ -158,7 +160,7 @@ export class SysWeb extends SysBase {
 		super.init(hTag, appPixi, val, main);
 
 		// 全画面状態切替
-		const pCvs: any = appPixi.view.parentElement!;
+		const pCvs: any = appPixi.canvas.parentElement!;
 		if ('requestFullscreen' in document.body) {
 			this.tglFlscr_sub = ()=> this.isFullScr
 				? document.exitFullscreen()
