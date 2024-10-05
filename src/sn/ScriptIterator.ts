@@ -788,47 +788,42 @@ export class ScriptIterator {
 		const st = this.#hScript[fn];
 		if (st) {this.#script = st; this.analyzeInit(); return}
 
-	{
-//		const fp_diff = this.#cnvSnPath(fn +'@');
-			// TODO: 派生ファイル対応
-		Assets.load({src: full_path, loadParser: 'loadTxt'}).then(b=> {
-			this.nextToken = this.#nextToken_Proc;
-			this.#lineNum = 1;
 
-			this.#resolveScript(b);
-			this.hTag.record_place({});
-			Assets.unload(full_path);
-			this.main.resume(()=> this.analyzeInit());
-				// 直接呼んでもいいが、内部コールスタック積んだままになるのがなんかイヤで
-		})
-		.catch(e=> console.error(`fn:ScriptIterator.ts jumpWork e:%o`, e))
-	}
-
-
-/*
-		const ldr = new Loader;
+		const a: {fn: string, src: string}[] = [];
 		let fp_diff = '';
 		try {
-			fp_diff = this.#cnvSnPath(fn +'@');
+			fp_diff = this.#cnvSnPath(fn +'@');	// わざと例外
 			// 派生ファイルが存在する場合
-			ldr.add({name: fn +':base', url: full_path});
-			ldr.add({name: fn, url: fp_diff});
+			a.push({fn: fn +':base', src: full_path});
+			a.push({fn, src: fp_diff});
 		} catch {
 			// 派生ファイルはない
-			ldr.add({name: fn, url: full_path});
+			a.push({fn, src: full_path});
 		}
-		ldr.use(async (res, next)=> {
-			try {
-				res.data = await this.sys.dec(res.extension, res.data);
-			} catch (e) {
-				this.main.errScript(`[jump系]snロード失敗です fn:${res.name} ${e}`, false);
-			}
-			next();
-		})
-		.load((_ldr, hRes)=> {
+		Assets.load(a.map(({fn, src})=> {
+			const alias = ':sn:'+ fn;
+			//if (Assets.cache.has(alias)) ...// まぁいらんかなと
+			Assets.add({alias, src, loadParser: 'loadTxt'});
+
+			return alias;
+		})).then(async ()=> {
+			const dec: (d: string)=> Promise<string> = this.sys.crypto
+				? d=> this.sys.dec('sn', d)
+				: d=> Promise.resolve(d);
+			const hRes: {[fn: string]: string} = {};
+			await Promise.allSettled(a.map(async ({fn})=> {
+				try {
+					const alias = ':sn:'+ fn;
+					hRes[fn] = await dec(Assets.get(alias));
+					Assets.unload(alias);
+				} catch (e) {
+					this.main.errScript(`[jump系]snロード失敗です fn:${fn} ${e}`, false);
+				}
+			}));
+
 			if (fp_diff) {	// 派生ファイルが存在する場合
-				const scrBase = hRes[fn +':base'].data;
-				const scrDiff = hRes[fn].data;
+				const scrBase = hRes[fn +':base'];
+				const scrDiff = hRes[fn];
 				const aBase = scrBase.split('\n');
 				const aDiff = scrDiff.split('\n');
 				const lenB = aBase.length;
@@ -837,19 +832,19 @@ export class ScriptIterator {
 				for (let i=0; i<lenD && i<lenB; ++i) aDiff[i] ||= aBase[i];
 
 				// 【接尾辞つきファイル】として扱う
-				hRes[fn].data = aDiff.join('\n');
+				hRes[fn] = aDiff.join('\n');
 				delete hRes[fn +':base'];
 			}
 
 			this.nextToken = this.#nextToken_Proc;
 			this.#lineNum = 1;
 
-			this.#resolveScript(hRes[fn].data);
+			this.#resolveScript(hRes[fn]);
 			this.hTag.record_place({});
 			this.main.resume(()=> this.analyzeInit());
 				// 直接呼んでもいいが、内部コールスタック積んだままになるのがなんかイヤで
 		});
-*/
+
 		this.main.stop();
 	}
 	private	analyzeInit(): void {

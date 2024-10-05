@@ -125,7 +125,9 @@ export class SpritesMng {
 		if (a.length === 0) return false;
 
 		a.forEach(fn=> {
-			if (! Assets.cache.has(fn)) needLoad = true;
+			if (Assets.cache.has(fn)) return;
+
+			needLoad = true;
 			Assets.add({alias: fn, src: SpritesMng.#cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SP_GSM)});
 		});
 		Assets.load(a).then(()=> {
@@ -148,11 +150,11 @@ export class SpritesMng {
 			});
 			fncAllComp(needLoad);
 
+			//TODO: スプライト系
 //			if (fn in SpritesMng.#hFn2ResAniSpr) {}
 			
 		});
 
-// TODO: とりあえずの仮
 /*
 		const aComp: {fn: string, fnc: IFncCompSpr}[] = [];
 		const ldr = new Loader;

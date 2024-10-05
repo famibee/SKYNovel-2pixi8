@@ -1,7 +1,23 @@
+	- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
+		- ただしWebGPU を使わず WebGLに固定
 
 - fix: startsWith、endsWith を積極使用
 - fix: [playse]系で同じ buf で、ページ移動状態でなく、違う fn を再生する際に再生していたサウンドリソースを破棄するように
 - fix: スクリプトリソースは内部オブジェクト生成後すぐ破棄するように
+
+	- TODO:
+		- 暗号化イメージ未テスト
+		- Blendmode まわり
+			- ギャラリーで確認
+		- スプライト系
+			- ギャラリーで確認
+		- Appパス、実行確認
+		- タグリファレンス更新
+			- [trans]
+				- デフォルト値を vert, frag, wgsl 属性で上書き可能
+
+
+- fix: Gamepad のスティック入力が効かなかった件
 - fix: esbuild-jest を tsx に切り替え
 - test: esbuild-jest がメンテされてないので ts-jest に切り替え
 

@@ -348,7 +348,7 @@ export class Layer {
 		throw `${bm_name} はサポートされない blendmode です`;
 	}
 	static	readonly	#hBlendmode: {[bm_name: string]: BLEND_MODES} = {
-	//	'inherit'
+		'inherit'		: 'inherit',
 		'normal'		: 'normal',
 		'add'			: 'add',
 		'multiply'		: 'multiply',
@@ -356,59 +356,32 @@ export class Layer {
 		'darken'		: 'darken',
 		'lighten'		: 'lighten',
 		'erase'			: 'erase',
-		'color_dodge'	: 'color-dodge',
-		'color_burn'	: 'color-burn',
-	//	'linear-burn'
-	//	'linear-dodge'
-	//	'linear-light'
-		'hard_light'	: 'hard-light',
-		'soft_light'	: 'soft-light',
-	//	'pin-light'
+		'color-dodge'	: 'color-dodge',
+		'color-burn'	: 'color-burn',
+		'linear-burn'	: 'linear-burn',
+		'linear-dodge'	: 'linear-dodge',
+		'linear-light'	: 'linear-light',
+		'hard-light'	: 'hard-light',
+		'soft-light'	: 'soft-light',
+		'pin-light'		: 'pin-light',
 		'difference'	: 'difference',
 		'exclusion'		: 'exclusion',
 		'overlay'		: 'overlay',
 		'saturation'	: 'saturation',
 		'color'			: 'color',
 		'luminosity'	: 'luminosity',
-		'normal_npm'	: 'normal-npm',
-		'add_npm'		: 'add-npm',
-		'screen_npm'	: 'screen-npm',
+		'normal-npm'	: 'normal-npm',
+		'add-npm'		: 'add-npm',
+		'screen-npm'	: 'screen-npm',
 		'none'			: 'none',
 		'subtract'		: 'subtract',
-	//	'divide'
-	//	'vivid-light'
-	//	'hard-mix'
-	//	'negation'
-	//	'min'
-	//	'max'
-		//TODO: 仮
-
-
-//	export type BLEND_MODES = 'inherit' | 'normal' | 'add' | 'multiply' | 'screen' | 'darken' | 'lighten' | 'erase' | 'color-dodge' | 'color-burn' | 'linear-burn' | 'linear-dodge' | 'linear-light' | 'hard-light' | 'soft-light' | 'pin-light' | 'difference' | 'exclusion' | 'overlay' | 'saturation' | 'color' | 'luminosity' | 'normal-npm' | 'add-npm' | 'screen-npm' | 'none' | 'subtract' | 'divide' | 'vivid-light' | 'hard-mix' | 'negation' | 'min' | 'max';
-		// いくつか未サポートなので、文字列置換か blendmode 文字を変更するか
-/*
-
-		'hue'			: BLEND_MODES.HUE,
-		'src_in'		: BLEND_MODES.SRC_IN,
-		'src_out'		: BLEND_MODES.SRC_OUT,
-		'src_atop'		: BLEND_MODES.SRC_ATOP,
-		'dst_over'		: BLEND_MODES.DST_OVER,
-		'dst_in'		: BLEND_MODES.DST_IN,
-		'dst_out'		: BLEND_MODES.DST_OUT,
-		'dst_atop'		: BLEND_MODES.DST_ATOP,
-*/
-//		'src_over'		: BLEND_MODES.SRC_OVER,
-//		'xor'			: BLEND_MODES.XOR,
+		'divide'		: 'divide',
+		'vivid-light'	: 'vivid-light',
+		'hard-mix'		: 'hard-mix',
+		'negation'		: 'negation',
+		'min'			: 'min',
+		'max'			: 'max',
 	};
-	static getNum2Blendmode(bmn: number): string {
-		return Layer.#hNum2Blendmode[bmn] ?? 'normal';
-	}
-	static	readonly	#hNum2Blendmode: {[bmn: number]: string} = {
-		0	/* NORMAL */		: 'normal',
-		1	/* ADD */			: 'add',
-		2	/* MULTIPLY */		: 'multiply',
-		3	/* SCREEN */		: 'screen',
-	}		//TODO: 仮
 
 	// アニメ・動画があるか
 	get containMovement(): boolean {return false}

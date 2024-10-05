@@ -212,7 +212,7 @@ export class FrameMng implements IGetFrm {
 	//	const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
 		const url2 = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
 		Assets.load(url2).then(async _d=> {
-			// TODO: 後回し
+			// 
 		});
 
 /*	// TODO: 暗号化イメージ未テスト

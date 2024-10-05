@@ -49,6 +49,7 @@ export type HArg = {
 	rule?	: string;
 	vert?	: string;
 	frag?	: string;
+	wgsl?	: string;
 	render?	: boolean;
 
 	pos?	: string;

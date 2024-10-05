@@ -27,7 +27,7 @@ import {DesignCast} from './DesignCast';
 import {EventListenerCtn} from './EventListenerCtn';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Application, Assets, Color, Container, Filter, GlProgram, Graphics, RenderTexture, Sprite, autoDetectRenderer} from 'pixi.js';
+import {Application, Assets, Color, Container, Filter, GlProgram, GpuProgram, Graphics, RenderTexture, Sprite, autoDetectRenderer} from 'pixi.js';
 
 export interface IMakeDesignCast { (idc	: DesignCast): void; };
 
@@ -417,7 +417,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 			rnd.render({container: this.#stage, target: renTx});
 			await this.sys.savePic(
 				url,
-				await rnd.extract.base64(Sprite.from(renTx)),
+				await rnd.extract.base64(Sprite.from(renTx, true)),
 			);
 
 			if (! CmnTween.isTrans) for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
@@ -567,7 +567,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 	}
 
 	//===================================================
-	//MARK: WebGL 頂点シェーダー
+	//MARK: WebGL 頂点シェーダー GLSL
 	// It's easier to see with VSCode extension 'GLSL with Imports'
 	// #version は入れない
 	static	readonly	#glslRuleTransVert = /* glsl */`
@@ -600,14 +600,14 @@ void main() {
 }`;
 
 	//===================================================
-	//MARK: WebGL フラグメントシェーダー
+	//MARK: WebGL フラグメントシェーダー GLSL
 	static	readonly	#glslRuleTransFrag = /* glsl */`
 precision mediump float;
 
 in vec2 vTextureCoord;
 uniform sampler2D uTexture;
 
-uniform sampler2D rule;
+uniform sampler2D uTxRule;
 uniform float vague;
 uniform float tick;
 
@@ -616,15 +616,13 @@ uniform highp vec4 outputFrame;
 
 void main() {
 	vec4 fg = texture(uTexture, vTextureCoord);
-	vec4 ru = texture(rule,     vTextureCoord);
+	vec4 ru = texture(uTxRule,  vTextureCoord);
 
 	float v = ru.r - tick;
 
-	gl_FragColor = abs(v) < vague
-		? vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5)
-		: v >= 0.0
-			? fg
-			: vec4(0);
+	gl_FragColor = vague <=	abs(v)
+		? 0.0 <= v ? fg : vec4(0)
+		: vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5);
 }`;
 /*
 	末尾が読みづらいが、以下のif文を消して三項演算子にしている。
@@ -642,36 +640,113 @@ void main() {
 */
 
 
-/*	// 動いた！　以下は保存用、触らない
-in vec2 vTextureCoord;
-uniform sampler2D uTexture;
-
-uniform sampler2D rule;
-uniform float vague;
-uniform float tick;
-
-uniform vec4 inputPixel;
-uniform highp vec4 outputFrame;
-
-void main() {
-	vec4 fg = texture(uTexture, vTextureCoord);
-	vec4 ru = texture(rule,     vTextureCoord);
-
-	float v = ru.r - tick;
-	if (abs(v) < vague) {
-		float a = fg.a *(0.5 +v /vague *0.5);
-		gl_FragColor = vec4(fg.rgb *a, a);
-		return;
-	}
-
-	gl_FragColor = v >= 0.0 ? fg : vec4(0);
-*/
-
-
 	//===================================================
-	//MARK: WebGPU フラグメントシェーダー
-	// It's easier to see with VSCode extension 'WGSL Literal'
-//	static	readonly	#wgslRuleTrans = /* wgsl */``;
+	//MARK: WebGPU 頂点シェーダー + フラグメントシェーダー WGSL
+	//	TODO: 開発中、動作しない
+	static	readonly	#wgslRuleTrans = /* wgsl */`
+struct GlobalUniforms {
+	uProjectionMatrix		: mat3x3<f32>,
+	uWorldTransformMatrix	: mat3x3<f32>,
+	uWorldColorAlpha		: vec4<f32>,
+	uResolution				: vec2<f32>,
+}
+struct LocalUniforms {
+	uTransformMatrix	: mat3x3<f32>,
+	uColor	: vec4<f32>,
+	uRound	: f32,
+}
+@group(0) @binding(0) var<uniform> globalUniforms	: GlobalUniforms;
+@group(1) @binding(0) var<uniform> localUniforms	: LocalUniforms;
+
+struct VertexOutput {
+	@builtin(position)	position: vec4<f32>,
+	@location(0)		texCoord: vec2<f32>,
+}
+
+@vertex
+fn mainVert(
+	@location(0) aPosition	: vec2<f32>,
+) -> VertexOutput {
+	var mvp = globalUniforms.uProjectionMatrix 
+		* globalUniforms.uWorldTransformMatrix 
+		* localUniforms.uTransformMatrix;
+
+	var out : VertexOutput;
+	out.texCoord.x = aPosition.x * 0.5;
+	out.texCoord.y = aPosition.y * 0.5;
+	out.position = vec4<f32>(mvp * vec3<f32>(aPosition, 1.0), 1.0);
+
+//	out.position = vec4<f32>(x - 1.0, y - 1.0, 0, 1);
+	return out;
+}
+
+
+struct TimeUniforms {
+	vague	: f32,
+	tick	: f32,
+}
+
+@group(2) @binding(1) var uTxRule	: texture_2d<f32>;
+@group(2) @binding(2) var uSmRule	: sampler;
+@group(2) @binding(3) var<uniform> timeUniforms	: TimeUniforms;
+
+struct FragmentInput {
+	@location(0) vTextureCoord: vec2<f32>,
+}
+
+@fragment
+fn mainFrag(inp: FragmentInput) -> @location(0) vec4<f32> {
+	return textureSample(uTxRule, uSmRule, inp.vTextureCoord);
+
+//	return textureSample(uTxRule, uSmRule, vTextureCoord + sin( (timeUniforms.tick + (vTextureCoord.x) * 14.) ) * 0.1);
+}`;
+
+
+/*
+struct GlobalUniforms {
+	uProjectionMatrix		: mat3x3<f32>,
+	uWorldTransformMatrix	: mat3x3<f32>,
+	uWorldColorAlpha		: vec4<f32>,
+	uResolution				: vec2<f32>,
+}
+struct LocalUniforms {
+	uTransformMatrix	: mat3x3<f32>,
+	uColor	: vec4<f32>,
+	uRound	: f32,
+}
+
+@group(0) @binding(0) var<uniform> globalUniforms	: GlobalUniforms;
+@group(1) @binding(0) var<uniform> localUniforms	: LocalUniforms;
+
+@vertex
+fn mainVert(
+	@location(0) aPosition	: vec2<f32>,
+) -> @builtin(position) vec4<f32> {
+	var mvp = globalUniforms.uProjectionMatrix 
+		* globalUniforms.uWorldTransformMatrix 
+		* localUniforms.uTransformMatrix;
+
+	return vec4<f32>(mvp * vec3<f32>(aPosition, 1.0), 1.0);
+}
+
+
+struct TimeUniforms {
+	vague	: f32,
+	tick	: f32,
+}
+
+@group(2) @binding(1) var uTxRule	: texture_2d<f32>;
+@group(2) @binding(2) var uSmRule	: sampler;
+@group(2) @binding(3) var<uniform> timeUniforms	: TimeUniforms;
+
+@fragment
+fn mainFrag(
+	@location(0) vUV: vec2<f32>,
+) -> @location(0) vec4<f32> {
+	return textureSample(uTxRule, uSmRule, vUV + sin( (timeUniforms.tick + (vUV.x) * 14.) ) * 0.1);
+*/
+	//===================================================
+
 
 
 	#rtTransBack = RenderTexture.create({
@@ -733,7 +808,7 @@ console.log(`fn:LayerMng.ts line:650 comp`);
 		const time = argChk_Num(hArg, 'time', 0);
 //		hArg[':id'] = pg.fore.name.slice(0, -7);
 //		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
-console.log(`fn:LayerMng.ts trans: A:${time === 0 || this.#evtMng.isSkipping} time:${time}`);
+console.log(`fn:LayerMng.ts [trans] time:${time}`);
 		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
 
 
@@ -783,7 +858,8 @@ console.log(`fn:LayerMng.ts trans: A:${time === 0 || this.#evtMng.isSkipping} ti
 
 
 		// クロスフェード
-		const {vert, frag, rule, chain} = hArg;	//TODO: マニュアル更新
+		const {rule} = hArg;
+console.log(`fn:LayerMng.ts rule:${rule}`);
 		if (! rule) {
 			this.#spTransFore.filters = [];
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
@@ -791,41 +867,29 @@ console.log(`fn:LayerMng.ts trans: A:${time === 0 || this.#evtMng.isSkipping} ti
 			return false;
 		}
 
-		// GLSL
+		// ルール画像（デフォルト値を vert, frag, wgsl 属性で上書き可能）
+		const {
+			vert = LayerMng.#glslRuleTransVert,
+			frag = LayerMng.#glslRuleTransFrag,
+			wgsl = LayerMng.#wgslRuleTrans,
+			chain,
+		} = hArg;
 		const vague	= argChk_Num(hArg, 'vague', 0.04);
-console.log(`fn:LayerMng.ts rule:${rule} frag=${frag}=`);
-		if (vert && frag) {
+		this.#sps.destroy();
+	this.#sps = new SpritesMng(rule, undefined, async sp=> {
+//		this.#sps = new SpritesMng(rule, undefined, sp=> {
 			const flt = new Filter({
-				glProgram	: new GlProgram({
+				glProgram	: GlProgram.from({
 					vertex	: vert,
 					fragment: frag,
 				}),
-				resources	: {
-					timeUniforms: {
-						vague	: {type: 'f32', value: vague},
-						tick	: {type: 'f32', value: 0},
-					},
-				},
-			});
-			this.#spTransFore.filters = [flt];
-
-			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
-			this.appPixi.ticker.add(fncRender);
-			return false;
-		}
-		if (vert || frag) throw 'vertex と frag は同時に指定して下さい';
-
-		// ルール画像
-		this.#sps.destroy();
-		this.#sps = new SpritesMng(rule, undefined, async sp=> {
-//		this.#sps = new SpritesMng(rule, undefined, sp=> {
-			const flt = new Filter({
-				glProgram	: new GlProgram({
-					vertex	: LayerMng.#glslRuleTransVert,
-					fragment: LayerMng.#glslRuleTransFrag,
+				gpuProgram	: GpuProgram.from({
+					vertex	: {entryPoint: 'mainVert', source: wgsl},
+					fragment: {entryPoint: 'mainFrag', source: wgsl},
 				}),
 				resources	: {
-					rule	: sp.texture.source,
+					uTxRule	: sp.texture.source,
+					uSmRule	: sp.texture.source.style,
 					timeUniforms: {
 						vague	: {type: 'f32', value: vague},
 						tick	: {type: 'f32', value: 0},
@@ -834,11 +898,11 @@ console.log(`fn:LayerMng.ts rule:${rule} frag=${frag}=`);
 			});
 //			this.#spTransFore.filters = [flt];
 
-			// === fore back の板を正しく作れてない
-			const t = await Assets.load('prj/bg/yun_1317.jpg');
-			const s = Sprite.from(t);
-			s.filters = [flt];
-			this.#stage.addChild(s);
+	// === fore back の板を正しく作れてない
+	const t = await Assets.load('prj/bg/yun_1317.jpg');
+	const s = Sprite.from(t, true);
+	s.filters = [flt];
+	this.#stage.addChild(s);
 
 			const tw = CmnTween.tweenA(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
 			sp.destroy();

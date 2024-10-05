@@ -558,14 +558,7 @@ export class TxtStage extends Container {
 			canvas.width = this.#infTL.$width;
 			canvas.height = this.#infTL.$height;
 			canvas.getContext('2d')!.drawImage(img, 0, 0);
-			canvas.toBlob(blob=> {
-				if (! blob) return;
-				const url = URL.createObjectURL(blob);
-				Texture.from(url).once('update', tx2=> {
-					fnc(tx2);
-					URL.revokeObjectURL(url);
-				});
-			});
+			fnc(Texture.from(canvas, true));
 		})
 		.catch(err=> DebugMng.myTrace(`goTxt() = ${err}`));
 	}
@@ -1050,7 +1043,7 @@ export class TxtStage extends Container {
 	#sss :Sprite | undefined = undefined;
 	snapshot(rnd: Renderer, re: ()=> void) {
 		this.#htm2tx(tx=> {
-			this.#sss = new Sprite(tx);	// Safariだけ文字影が映らない
+			this.#sss = Sprite.from(tx, true);	// Safariだけ文字影が映らない
 			if (this.#isTategaki) {
 				this.#sss.x += CmnLib.stageW -(this.#left +this.#infTL.$width)
 				//- ((CmnLib.isSafari && !CmnLib.isMobile)	// 無効化 2022/02/09
@@ -1058,36 +1051,24 @@ export class TxtStage extends Container {
 				//	: this.#infTL.pad_left +this.#infTL.pad_right);
 			}
 			this.#sss.y -= this.#padTx4y;
-/*
-			this.#sss.sourceBounds = new Rectangle(
+
+			this.#sss.bounds.clear();
+			this.#sss.bounds.addFrame(
 				0,
 				0,
 				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
 				Math.min(this.#sss.height, this.#infTL.$height),
 			);	// これがないと画面サイズを超える
-*/
-			// TODO: これで正しいのか不明
-			this.#sss.boundsArea = new Rectangle(
-				0,
-				0,
-				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
-				Math.min(this.#sss.height, this.#infTL.$height),
-			);	// これがないと画面サイズを超える
-/*
-			this.#sss.texture.frame = new Rectangle(
-				0,
-				0,
-				Math.min(this.#sss.width, this.#infTL.$width -this.#left),
-				Math.min(this.#sss.height, this.#infTL.$height),
-			);	// これがないと画面サイズを超える
-*/
+
 			this.#cntTxt.addChild(this.#sss);
 			rnd.render({container: this.#sss, clear: false});
 			re();
 		}, false);
 	}
 	snapshot_end() {
-		if (this.#sss) {this.#cntTxt.removeChild(this.#sss); this.#sss = undefined}
+		if (! this.#sss) return;
+		this.#cntTxt.removeChild(this.#sss);
+		this.#sss = undefined;
 	}
 
 	makeDesignCast(_gdc: IMakeDesignCast) {

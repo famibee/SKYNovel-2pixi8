@@ -63,7 +63,7 @@ export class Main implements IMain {
 			width			: this.#cfg.oCfg.window.width,
 			height			: this.#cfg.oCfg.window.height,
 			backgroundColor	: new Color(this.#cfg.oCfg.init.bg_color),
-			hello: true,	// webgl モードかが DevTools に出る
+			//hello: true,	// webgpu/webgl モードが DevTools に出る
 	//		preference: 'webgpu',	// 優先指定
 			preference: 'webgl',	// 優先指定
 		});
