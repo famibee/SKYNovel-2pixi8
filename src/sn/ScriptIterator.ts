@@ -815,7 +815,7 @@ export class ScriptIterator {
 				try {
 					const alias = ':sn:'+ fn;
 					hRes[fn] = await dec(Assets.get(alias));
-					Assets.unload(alias);
+					await Assets.unload(alias);
 				} catch (e) {
 					this.main.errScript(`[jump系]snロード失敗です fn:${fn} ${e}`, false);
 				}

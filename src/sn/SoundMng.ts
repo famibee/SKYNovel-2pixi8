@@ -109,7 +109,7 @@ export class SoundMng {
 
 		// キャッシュ削除
 		const sb0 = this.#hSndBuf[buf];
-		if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging')) Assets.unload(fn);
+		if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging')) Assets.unload(':snd:'+ fn);
 
 		// isSkipKeyDown()は此処のみとする。タイミングによって変わる
 		if (argChk_Boolean(hArg, 'canskip', true) && this.#evtMng.isSkipping) return false;

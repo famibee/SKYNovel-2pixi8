@@ -277,8 +277,9 @@ export class SndBuf {
 			return;
 		}
 
-		Assets.add({alias: fn, src: url});
-		Assets.load(fn).then(async b=> {
+		const alias = ':snd:'+ fn;
+		Assets.add({alias, src: url});
+		Assets.load(alias).then(async b=> {
 			try {
 				o.source = <ArrayBuffer><unknown>(await sys.decAB(b));
 				Sound.from(o);

@@ -1,6 +1,7 @@
 	- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
 		- ただしWebGPU を使わず WebGLに固定
 
+- fix: [trans]処理のリファクタリング
 - fix: startsWith、endsWith を積極使用
 - fix: [playse]系で同じ buf で、ページ移動状態でなく、違う fn を再生する際に再生していたサウンドリソースを破棄するように
 - fix: スクリプトリソースは内部オブジェクト生成後すぐ破棄するように
