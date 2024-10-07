@@ -356,15 +356,15 @@ export class LayerMng implements IGetFrm, IRecorder {
 		// 一時的に非表示にしてスナップショット
 		const hBk: {[ln: string]: boolean} = {};
 		for (const ln of this.#getLayers()) {
-			const sp = this.#hPages[ln].fore.spLay;
+			const sp = this.#hPages[ln].fore.ctn;
 			hBk[ln] = sp.visible;
 			sp.visible = false;
 		}
-		for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln].fore.spLay.visible = true;
+		for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln].fore.ctn.visible = true;
 
 		this.sys.capturePage(url, width, height, ()=> {
 			for (const [ln, v] of Object.entries(hBk)) {
-				this.#hPages[ln].fore.spLay.visible = v;
+				this.#hPages[ln].fore.ctn.visible = v;
 			}
 			this.#frmMng.restoreAllFrame();
 			enableEvent();
@@ -511,8 +511,8 @@ export class LayerMng implements IGetFrm, IRecorder {
 		// Trans
 		const ln = this.#argChk_layer(hArg);
 		const pg = this.#hPages[ln];
-		const back = pg.back.spLay;
-		const fore = pg.fore.spLay;
+		const back = pg.back.ctn;
+		const fore = pg.fore.ctn;
 		if (argChk_Boolean(hArg, 'float', false)) {
 			this.#back.setChildIndex(back, this.#back.children.length -1);
 			this.#fore.setChildIndex(fore, this.#fore.children.length -1);
@@ -534,8 +534,8 @@ export class LayerMng implements IGetFrm, IRecorder {
 			if (! pg_dive) throw '[lay] 属性 dive【'+ dive +'】が不正です。レイヤーがありません';
 			const back_dive = pg_dive.back;
 			const fore_dive = pg_dive.fore;
-			const idx_back_dive = this.#back.getChildIndex(back_dive.spLay);
-			const idx_fore_dive = this.#fore.getChildIndex(fore_dive.spLay);
+			const idx_back_dive = this.#back.getChildIndex(back_dive.ctn);
+			const idx_fore_dive = this.#fore.getChildIndex(fore_dive.ctn);
 			idx_dive = (idx_back_dive < idx_fore_dive) ?idx_back_dive :idx_fore_dive;
 			if (idx_dive > this.#back.getChildIndex(back)) --idx_dive;	//自分が無くなって下がる分下げる
 
@@ -772,14 +772,13 @@ fn mainFrag(
 		}
 
 		const comp = async ()=> {
-console.log(`fn:LayerMng.ts comp`);
 			[this.#fore, this.#back] = [this.#back, this.#fore];
 			const aPrm: Promise<void>[] = [];
 			for (const [ln, pg] of Object.entries(this.#hPages)) {
 				if (sDoTrans.has(ln)) {pg.transPage(aPrm); continue}
 
 				// transしないために交換する
-				const {fore: {spLay: f}, back: {spLay: b}} = pg;
+				const {fore: {ctn: f}, back: {ctn: b}} = pg;
 				const idx = this.#fore.getChildIndex(b);
 				this.#fore.removeChild(b);
 				this.#back.removeChild(f);
@@ -798,22 +797,22 @@ console.log(`fn:LayerMng.ts comp`);
 
 		// 一瞬切り替え
 		const time = argChk_Num(hArg, 'time', 0);
-console.log(`fn:LayerMng.ts [trans] time:${time}`);
 		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
 
 
-		let fncRenderFore = ()=> this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});
-		fncRenderFore();	// 初期値設定
-		if (! aLayFore.some(lay=> lay.containMovement)) fncRenderFore = ()=> {
-			const fnc = fncRenderFore;
-			fncRenderFore = ()=> {};	// 動きがないなら最初に一度だけ
-			fnc();
-		};
+		const render = ()=> this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});
 
+		const needUpd = aLayFore.some(lay=> lay.containMovement);
 		let fncRender_base = ()=> {
-			fncRender_base = ()=> fncRenderFore();
-			fncRender_base();
+			if (needUpd) {
+				fncRender_base = ()=> render();
+			}
+			else {	// 動きがないなら最初に一度だけ
+				fncRender_base = ()=> {};
+				this.appPixi.ticker.remove(fncRender);
+			}
 
+			render();
 			this.#fore.visible = false;	// visible はここで。でないとちらつく
 			this.#back.visible = true;	// [trans]中だけ一時的に見せる
 			this.#spTransFore.visible = true;
@@ -824,7 +823,6 @@ console.log(`fn:LayerMng.ts [trans] time:${time}`);
 
 		// クロスフェード
 		const {rule} = hArg;
-console.log(`fn:LayerMng.ts rule:${rule}`);
 		this.#spTransFore.alpha = 1;
 		if (! rule) {
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
@@ -838,7 +836,6 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 				vert = LayerMng.#glslRuleTransVert,
 				frag = LayerMng.#glslRuleTransFrag,
 				wgsl = LayerMng.#wgslRuleTrans,
-				chain,
 			} = hArg;
 			const vague	= argChk_Num(hArg, 'vague', 0.04);
 			const flt = new Filter({
@@ -861,12 +858,11 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 			});
 			this.#spTransFore.filters = [flt];
 
-			const tw = CmnTween.tweenA(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
+			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
+			this.appPixi.ticker.add(fncRender);
+
 			sp.destroy();
 			sm.destroy();
-
-			CmnTween.tweenB(chain, tw);
-			this.appPixi.ticker.add(fncRender);
 		});
 		return false;
 	}
@@ -886,8 +882,8 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 	#sortLayers(layers = ''): string[] {
 		return this.#getLayers(layers)
 		.sort((a, b)=> {
-			const ai = this.#fore.getChildIndex(this.#hPages[a].fore.spLay);
-			const bi = this.#fore.getChildIndex(this.#hPages[b].fore.spLay);
+			const ai = this.#fore.getChildIndex(this.#hPages[a].fore.ctn);
+			const bi = this.#fore.getChildIndex(this.#hPages[b].fore.ctn);
 			if (ai < bi) return -1;
 			if (ai > bi) return 1;
 			return 0;
@@ -913,7 +909,7 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 		const {layer} = hArg;
 		const aDo: Container[] = [];
 		for (const ln of this.#getLayers(layer)) {
-			aDo.push(this.#hPages[ln].fore.spLay);
+			aDo.push(this.#hPages[ln].fore.ctn);
 		}
 		this.#rtTransFore.resize(CmnLib.stageW, CmnLib.stageH);
 			// NOTE: スマホ回転対応が要るかも？
@@ -967,7 +963,7 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 		const hTo = CmnTween.cnvTweenArg(hArg, lay);
 		const arrive = argChk_Boolean(hArg, 'arrive', false);
 		const backlay = argChk_Boolean(hArg, 'backlay', false);
-		const spBack: any = pg.back.spLay;	// fore, back が変わる恐れで外へ
+		const spBack: any = pg.back.ctn;	// fore, back が変わる恐れで外へ
 		CmnTween.tween(name ?? layer, hArg, lay, CmnTween.cnvTweenArg(hArg, lay), ()=> {}, finishBlendLayer, ()=> {
 			if (arrive) Object.assign(lay, hTo);
 			if (backlay) for (const nm of Object.keys(CmnTween.hMemberCnt)) spBack[nm] = (lay as any)[nm];
@@ -976,7 +972,7 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 //		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
 
 		if ('filter' in hArg) {
-			lay.spLay.filters = [Layer.bldFilters(hArg)];
+			lay.ctn.filters = [Layer.bldFilters(hArg)];
 			lay.aFltHArg = [hArg];
 		}
 
@@ -1002,7 +998,7 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 		return false;
 	}
 	#add_filter2(l: Layer, hArg: HArg) {
-		const s = l.spLay;
+		const s = l.ctn;
 		s.filters ??= [];
 		s.filters = [
 			...s.filters instanceof Array ?s.filters :[s.filters],
@@ -1019,14 +1015,14 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 			if (hArg.page === 'both') {	// page=both で両面に
 				const f = pg.fore;
 				const b = pg.back;
-				f.spLay.filters = [];
-				b.spLay.filters = [];
+				f.ctn.filters = [];
+				b.ctn.filters = [];
 				f.aFltHArg = [];
 				b.aFltHArg = [];
 				return;
 			}
 			const l = pg.getPage(hArg);
-			l.spLay.filters = [];
+			l.ctn.filters = [];
 			l.aFltHArg = [];
 		});
 
@@ -1049,7 +1045,7 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 		return false;
 	}
 	#enable_filter2(l: Layer, hArg: HArg) {
-		const s = l.spLay;
+		const s = l.ctn;
 		const a = s.filters instanceof Array ?s.filters :[s.filters];
 		const len = a.length;
 		if (len === 0) throw 'フィルターがありません';
@@ -1346,8 +1342,8 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 				if (! fore) continue;
 
 				const i = len > idx ?idx :len -1;
-				this.#fore.setChildIndex(fore.spLay, i);
-				this.#back.setChildIndex(back.spLay, i);
+				this.#fore.setChildIndex(fore.ctn, i);
+				this.#back.setChildIndex(back.ctn, i);
 			}
 			re();
 		}));
