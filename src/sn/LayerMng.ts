@@ -183,7 +183,6 @@ export class LayerMng implements IGetFrm, IRecorder {
 		this.#stage = appPixi.stage;
 		this.#stage.addChild(this.#back);
 		this.#stage.addChild(this.#fore);
-		this.#stage.addChild(this.#spTransBack);
 		this.#stage.addChild(this.#spTransFore);
 		this.#stage.label = 'stage';	// 4tst
 /*
@@ -389,11 +388,14 @@ export class LayerMng implements IGetFrm, IRecorder {
 			const pg = hArg.page !== 'back' ?'fore' :'back';
 			if (CmnTween.isTrans) a.push(new Promise<void>(re=> {// [trans]中
 				this.#back.visible = true;
+/*
 				for (const cnt of this.#aRndBack) {
 					rnd.render({container: cnt, clear: false});
 				}
+*/
 				this.#back.visible = false;
-				this.#spTransBack.visible = true;
+//				this.#spTransBack.visible = true;
+//TODO: 再度作成中
 
 				const a = this.#fore.filters instanceof Array ? this.#fore.filters: [this.#fore.filters];
 				this.#fore.filters = [
@@ -749,19 +751,11 @@ fn mainFrag(
 
 
 
-	#rtTransBack = RenderTexture.create({
-		width	: CmnLib.stageW,
-		height	: CmnLib.stageH,
-	});
-	#spTransBack = new Sprite(this.#rtTransBack);
-
 	#rtTransFore = RenderTexture.create({
 		width	: CmnLib.stageW,
 		height	: CmnLib.stageH,
 	});
 	#spTransFore = new Sprite(this.#rtTransFore);
-
-	#aRndBack	: Container[] = [];
 
 	//MARK: ページ裏表を交換
 	#trans(hArg: HArg) {
@@ -772,18 +766,9 @@ fn mainFrag(
 		const sDoTrans = new Set<string>;
 		const aLayFore: Layer[] = [];
 		for (const ln of this.#getLayers(layer)) {
-//if (ln === 'base') console.log(`fn:LayerMng.ts line:775 Fore ln:${ln} dmp=${this.#hPages[ln].fore.dump()}`);
 			sDoTrans.add(ln);
 			const lay = this.#hPages[ln].fore;
 			aLayFore.push(lay);
-		}
-		const aLayBack: Layer[] = [];
-		this.#aRndBack = [];
-		for (const ln of this.#getLayers()) {
-			const lay = this.#hPages[ln][sDoTrans.has(ln) ?'back' :'fore'];
-//if (ln === 'base') console.log(`fn:LayerMng.ts line:782 Back ln:${ln} - [[${sDoTrans.has(ln) ?'back' :'fore'}]] dmp=${lay.dump()}`);
-			this.#aRndBack = [...this.#aRndBack, ...lay.spLay.children]
-			aLayBack.push(lay);
 		}
 
 		const comp = async ()=> {
@@ -804,50 +789,42 @@ console.log(`fn:LayerMng.ts comp`);
 			await Promise.allSettled(aPrm);
 
 			this.#fore.visible = true;
-			//this.#back.visible = false;
+			this.#back.visible = false;	// 再び非表示の裏方に（直前までforeだった）
 			this.#spTransFore.visible = false;
-			this.#spTransBack.visible = false;
 		};
-		const time = argChk_Num(hArg, 'time', 0);
 //		hArg[':id'] = pg.fore.name.slice(0, -7);
 //		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
-console.log(`fn:LayerMng.ts [trans] time:${time}`);
 		this.#spTransFore.filters = [];
+
+		// 一瞬切り替え
+		const time = argChk_Num(hArg, 'time', 0);
+console.log(`fn:LayerMng.ts [trans] time:${time}`);
 		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
 
-
-		let fncRenderBack = ()=> {
-			for (const spLay of this.#aRndBack) this.appPixi.renderer.render({container: spLay, target: this.#rtTransBack, clear: false});
-		};
-		if (! aLayBack.some(lay=> lay.containMovement)) {
-			const fnc = fncRenderBack;	// 動きがないなら最初に一度
-			fncRenderBack = ()=> {fncRenderBack = ()=> {}; fnc()};
-		}
 
 		let fncRenderFore = ()=> this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});
 		fncRenderFore();	// 初期値設定
 		if (! aLayFore.some(lay=> lay.containMovement)) fncRenderFore = ()=> {
-			const oldFnc = fncRenderFore;	// 動きがないなら最初に一度だけ
-			fncRenderFore = ()=> {};
-			oldFnc();
+			const fnc = fncRenderFore;
+			fncRenderFore = ()=> {};	// 動きがないなら最初に一度だけ
+			fnc();
 		};
 
 		let fncRender_base = ()=> {
-			fncRender_base = ()=> {fncRenderBack(); fncRenderFore()};
+			fncRender_base = ()=> fncRenderFore();
 			fncRender_base();
-		
+
 			this.#fore.visible = false;	// visible はここで。でないとちらつく
-			//this.#back.visible = false;
+			this.#back.visible = true;	// [trans]中だけ一時的に見せる
 			this.#spTransFore.visible = true;
-			this.#spTransBack.visible = true;
 		};
+		const fncRender = ()=> fncRender_base();
+		const comp2 = ()=> {this.appPixi.ticker.remove(fncRender); comp()};
 
 
 		// クロスフェード
 		const {rule} = hArg;
 console.log(`fn:LayerMng.ts rule:${rule}`);
-		const fncRender = ()=> fncRender_base();
-		const comp2 = ()=> {this.appPixi.ticker.remove(fncRender); comp()};
 		this.#spTransFore.alpha = 1;
 		if (! rule) {
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
@@ -856,16 +833,14 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 		}
 
 		// ルール画像（デフォルト値を vert, frag, wgsl 属性で上書き可能）
-		const {
-			vert = LayerMng.#glslRuleTransVert,
-			frag = LayerMng.#glslRuleTransFrag,
-			wgsl = LayerMng.#wgslRuleTrans,
-			chain,
-		} = hArg;
-		const vague	= argChk_Num(hArg, 'vague', 0.04);
-		this.#sps.destroy();
-	//	this.#sps = new SpritesMng(rule, undefined, async sp=> {
-		this.#sps = new SpritesMng(rule, undefined, sp=> {
+		const sm = new SpritesMng(rule, undefined, sp=> {
+			const {
+				vert = LayerMng.#glslRuleTransVert,
+				frag = LayerMng.#glslRuleTransFrag,
+				wgsl = LayerMng.#wgslRuleTrans,
+				chain,
+			} = hArg;
+			const vague	= argChk_Num(hArg, 'vague', 0.04);
 			const flt = new Filter({
 				glProgram	: GlProgram.from({
 					vertex	: vert,
@@ -884,25 +859,17 @@ console.log(`fn:LayerMng.ts rule:${rule}`);
 					},
 				},
 			});
-//
 			this.#spTransFore.filters = [flt];
-/*
-	// === fore back の板を正しく作れてない
-	const t = await Assets.load('prj/bg/yun_1317.jpg');
-	const s = Sprite.from(t, true);
-	s.filters = [flt];
-	this.#stage.addChild(s);
-*/
 
 			const tw = CmnTween.tweenA(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
 			sp.destroy();
+			sm.destroy();
 
 			CmnTween.tweenB(chain, tw);
 			this.appPixi.ticker.add(fncRender);
 		});
 		return false;
 	}
-	#sps	= new SpritesMng;
 
 	#getLayers(layer = ''): string[] {return layer ?layer.split(',') :this.#aLayName}
 	#foreachLayers(hArg: HArg, fnc: (ln: string, $pg: Pages)=> void): ReadonlyArray<string> {
