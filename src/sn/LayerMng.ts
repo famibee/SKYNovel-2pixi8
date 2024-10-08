@@ -384,45 +384,19 @@ export class LayerMng implements IGetFrm, IRecorder {
 			backgroundColor: b_color & 0xFFFFFF,
 			autoDensity: true,
 		}).then(async rnd=> {
-			const a = [];
 			const pg = hArg.page !== 'back' ?'fore' :'back';
-			if (CmnTween.isTrans) a.push(new Promise<void>(re=> {// [trans]中
-				this.#back.visible = true;
-/*
-				for (const cnt of this.#aRndBack) {
-					rnd.render({container: cnt, clear: false});
-				}
-*/
-				this.#back.visible = false;
-//				this.#spTransBack.visible = true;
-//TODO: 再度作成中
-
-				const a = this.#fore.filters instanceof Array ? this.#fore.filters: [this.#fore.filters];
-				this.#fore.filters = [
-					...a!,
-					...this.#spTransFore.filters instanceof Array
-					? this.#spTransFore.filters
-					: [this.#spTransFore.filters]
-				];
-				this.#fore.visible = true;
-				rnd.render({container: this.#fore, clear: false});
-				this.#fore.visible = false;
-				this.#fore.filters = a;
-				re();
-			}));
-			else for (const ln of this.#getLayers(hArg.layer)) a.push(
-				new Promise<void>(re=> this.#hPages[ln][pg].snapshot(rnd, ()=>re()))
+			await Promise.allSettled(
+				this.#getLayers(hArg.layer).map(ln=> new Promise<void>(
+					re=> this.#hPages[ln][pg].snapshot(rnd, re)
+				))
 			);
-			await Promise.allSettled(a);
 
 			const renTx = RenderTexture.create({width: rnd.width, height: rnd.height});	// はみ出し対策
 			rnd.render({container: this.#stage, target: renTx});
-			await this.sys.savePic(
-				url,
-				await rnd.extract.base64(Sprite.from(renTx, true)),
-			);
+			await this.sys.savePic(url, await rnd.extract.base64(renTx));
+			renTx.destroy();
 
-			if (! CmnTween.isTrans) for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
+			for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
 			rnd.destroy(true);
 
 			enableEvent();

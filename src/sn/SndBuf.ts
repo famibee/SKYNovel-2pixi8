@@ -270,16 +270,14 @@ export class SndBuf {
 		this.#initVol = ()=> {};
 	};
 	#playseSub(fn: string, o: Options): void {
-		const url = cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SOUND);
-		if (! url.endsWith('.bin')) {
-			o.url = url;
+		const src = cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SOUND);
+		if (! src.endsWith('.bin')) {
+			o.url = src;
 			Sound.from(o);
 			return;
 		}
 
-		const alias = ':snd:'+ fn;
-		Assets.add({alias, src: url});
-		Assets.load(alias).then(async b=> {
+		Assets.load({alias: ':snd:'+ fn, src}).then(async b=> {
 			try {
 				o.source = <ArrayBuffer><unknown>(await sys.decAB(b));
 				Sound.from(o);

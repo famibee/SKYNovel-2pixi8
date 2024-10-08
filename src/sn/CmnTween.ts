@@ -205,7 +205,6 @@ export class CmnTween {
 		return CmnTween.#evtMng.waitEvent('tsy nm:'+ CmnTween.TW_INT_TRANS, hArg, ()=> CmnTween.finish_trans());
 	}
 	static	readonly	TW_INT_TRANS = 'trans\n';	// 改行でスクリプトから絶対指定できない値に
-	static	get	isTrans(): boolean {return CmnTween.#hTwInf[CmnTween.TW_INT_TRANS]?.tw !== undefined}
 
 	// レイヤのトランジションの停止
 	static	finish_trans(): boolean {CmnTween.#hTwInf[CmnTween.TW_INT_TRANS]?.tw?.stop().end(); return false}	// stop()とend()は別

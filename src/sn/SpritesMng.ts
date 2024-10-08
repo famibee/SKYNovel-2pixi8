@@ -105,9 +105,8 @@ export class SpritesMng {
 
 	//static #ldrHFn: {[fn: string]: 1} = {};
 	static #csv2Sprites(csv: string, fncFirstComp: IFncCompSpr, fncAllComp: (isStop: boolean)=> void, addChild: (sp: Sprite)=> void): boolean {
-		// Data URI
 		let needLoad = false;
-		if (csv.startsWith('data:')) {
+		if (csv.startsWith('data:')) {	// Data URI
 			needLoad = ! Assets.cache.has(csv);
 			Assets.load({
 				alias	: csv,

@@ -24,8 +24,8 @@ export class SysApp extends SysNode {
 	constructor(hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}) {
 		super(hPlg, arg);
 
-		Assets.init({basePath: process.cwd()});		//TODO: Appパス
-			// SysNode に置くとテストで【already init()】
+		Assets.init({basePath: process.cwd()});
+			// SysNode に置くとテストで【already init()】が出てしまう
 
 		globalThis.addEventListener('DOMContentLoaded', async ()=> this.loaded(hPlg, arg), {once: true, passive: true});
 	}

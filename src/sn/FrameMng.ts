@@ -15,17 +15,17 @@ import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {Main} from './Main';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Application, Assets} from 'pixi.js';
+import {Application, Assets, Renderer, Texture} from 'pixi.js';
 
 
 export class FrameMng implements IGetFrm {
 	static	#cfg	: Config;
 	static	#sys	: SysBase;
-	// static	#main	: IMain;
-	static	init(cfg: Config, sys: SysBase, _main: IMain): void {
+	static	#main	: IMain;
+	static	init(cfg: Config, sys: SysBase, main: IMain): void {
 		FrameMng.#cfg = cfg;
 		FrameMng.#sys = sys;
-		// FrameMng.#main = main;
+		FrameMng.#main = main;
 	}
 
 	constructor(hTag: IHTag, private readonly appPixi: Application, private readonly val: IVariable) {
@@ -35,6 +35,8 @@ export class FrameMng implements IGetFrm {
 		hTag.set_frame		= o=> this.#set_frame(o);	// フレーム変数に設定
 		hTag.frame			= o=> this.#frame(o);		// フレームに設定
 		hTag.tsy_frame		= o=> this.#tsy_frame(o);	// フレームをトゥイーン開始
+
+		FrameMng.rnd = appPixi.renderer;
 	}
 
 	#evtMng	: IEvtMng;
@@ -199,51 +201,46 @@ export class FrameMng implements IGetFrm {
 	}
 
 	static	#REG_REP_PRM = /\?([^?]+)$/;	// https://regex101.com/r/ZUnoFq/1
-	static	#loadPic2Img(src: string, img: HTMLImageElement, _onload?: (img2: HTMLImageElement)=> void) {
-		const oUrl = this.#hEncImgOUrl[src];
+	static	#loadPic2Img(alias: string, img: HTMLImageElement, onload?: (img2: HTMLImageElement)=> void) {
+		const oUrl = this.#hEncImgOUrl[alias];
 		if (oUrl) {img.src = oUrl; return}
 
-		const aImg = this.#hAEncImg[src];
-		if (aImg) {aImg.push(img); return}
-		this.#hAEncImg[src] = [img];
+		const aImg = this.#hAEncImg[alias];
+		if (aImg) {aImg.push(img); return}	// load 終了前の駆け込み対応
+		this.#hAEncImg[alias] = [img];
 
-		const srcNoPrm = src.replace(FrameMng.#REG_REP_PRM, '');
-	// TODO: 暗号化イメージ未テスト
-	//	const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
-		const url2 = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
-		Assets.load(url2).then(async _d=> {
-			// 
-		});
+		const srcNoPrm = alias.replace(FrameMng.#REG_REP_PRM, '');
+		const prmSrc = (alias === srcNoPrm) ?'' :alias.slice(srcNoPrm.length);
+		const fncTx2ImgElm = async (tx: Texture)=> {
+			const b64 = await this.rnd.extract.base64(tx);
+			Assets.unload(alias);
 
-/*	// TODO: 暗号化イメージ未テスト
-		const ld2 = (new Loader)
-		.add({name: src, url: url2, xhrType: LoaderResource.XHR_RESPONSE_TYPE.BUFFER,});
-		if (FrameMng.#sys.crypto && getExt(url2) === 'bin') ld2.use(async (res, next)=> {
-			try {
-				const r = await FrameMng.#sys.decAB(res.data);
-				if (res.extension !== 'bin') {next(); return}
-
-				res.data = r;
-				if (r instanceof HTMLImageElement) res.type = LoaderResource.TYPE.IMAGE;
-			} catch (e) {
-				FrameMng.#main.errScript(`GrpLayer loadPic ロード失敗です fn:${res.name} ${e}`, false)
+			const urlImg = this.#hEncImgOUrl[alias] = b64 + (b64.startsWith('blob:') ?'' :prmSrc);
+			for (const i of this.#hAEncImg[alias]) {
+				i.src = urlImg;
+				if (onload) i.onload = ()=> onload(i);
 			}
-			next();
-		});
-		ld2.load((_ldr, hRes)=> {
-			for (const [s2, {data: {src}}] of Object.entries(hRes)) {
-				const u2 = this.#hEncImgOUrl[s2]
-				= src + (src.startsWith('blob:') ?'' :prmSrc);
-				for (const i of this.#hAEncImg[s2]) {
-					i.src = u2;
-					if (onload) i.onload = ()=> onload(i);
+			delete this.#hAEncImg[alias];
+		};
+
+		const src = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
+		if (FrameMng.#sys.crypto && getExt(src) === 'bin') {
+			Assets.load({alias, src, loadParser: 'loadTxt'}).then(async d=> {
+				try {
+					const r = await FrameMng.#sys.decAB(d);
+					if (r instanceof ArrayBuffer) {	// このケースはない予定
+						//fncTx2ImgElm(Texture.from( r , true));
+						return;
+					}
+					fncTx2ImgElm(Texture.from(r, true));
+				} catch (e) {
+					FrameMng.#main.errScript(`GrpLayer loadPic ロード失敗です fn:${alias} ${e}`, false)
 				}
-				delete this.#hAEncImg[s2];
-			//	URL.revokeObjectURL(u2);// 画面遷移で毎回再生成するので
-			}
-		});
-*/
+			});
+		}
+		else Assets.load({alias, src}).then(fncTx2ImgElm);
 	}
+	static	rnd :Renderer;
 	static	#hAEncImg		: {[src: string]: HTMLImageElement[]}	= {};
 	static	#hEncImgOUrl	: {[src: string]: string}				= {};
 

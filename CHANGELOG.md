@@ -1,5 +1,5 @@
 	- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
-		- ただしWebGPU を使わず WebGLに固定
+		- ただし WebGPU を使わず WebGL に固定
 
 - fix: [trans]処理のリファクタリング
 - fix: startsWith、endsWith を積極使用
@@ -10,9 +10,8 @@
 		- 暗号化イメージ未テスト
 		- Blendmode まわり
 			- ギャラリーで確認
+		- ボタンオーバーの音が鳴ってない、というかイベントが発生してない
 		- スプライト系
-			- ギャラリーで確認
-		- Appパス、実行確認
 		- タグリファレンス更新
 			- [trans]
 				- デフォルト値を vert, frag, wgsl 属性で上書き可能

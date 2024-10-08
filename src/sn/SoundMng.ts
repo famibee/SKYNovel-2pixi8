@@ -13,7 +13,7 @@ import {SysBase} from './SysBase';
 import {SndBuf} from './SndBuf';
 
 import {sound, utils} from '@pixi/sound';
-import { Assets } from 'pixi.js';
+import {Assets} from 'pixi.js';
 
 
 export class SoundMng {
@@ -109,7 +109,8 @@ export class SoundMng {
 
 		// キャッシュ削除
 		const sb0 = this.#hSndBuf[buf];
-		if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging')) Assets.unload(':snd:'+ fn);
+		const alias = ':snd:'+ fn;
+		if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging') && Assets.cache.has(alias)) Assets.unload(alias);
 
 		// isSkipKeyDown()は此処のみとする。タイミングによって変わる
 		if (argChk_Boolean(hArg, 'canskip', true) && this.#evtMng.isSkipping) return false;
