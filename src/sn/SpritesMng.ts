@@ -6,7 +6,7 @@
 ** ***** END LICENSE BLOCK ***** */
 
 import {Config} from './Config';
-import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import {IEvtMng, argChk_Boolean, argChk_Num, int} from './CmnLib';
 import {IMain, IVariable} from './CmnInterface';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {SysBase} from './SysBase';
@@ -27,30 +27,29 @@ interface Iface {
 interface Ihface { [name: string]: Iface; };
 
 interface IResAniSpr {
-	aTex	: Texture[];
 	meta	: {
 		animationSpeed? :number;
 	};
+	_frameKeys	: string[];
 }
 
 
 export class SpritesMng {
 	static	#cfg	: Config;
 	// static	#val	: IVariable;
-	// static	#sys	: SysBase;
-	// static	#main	: IMain;
-	static	init(cfg: Config, _val: IVariable, _sys: SysBase, _main: IMain, sndMng: SoundMng) {
+	static	#sys	: SysBase;
+	static	#main	: IMain;
+	static	init(cfg: Config, _val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
 //	static	init(cfg: Config, val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
 		SpritesMng.#cfg = cfg;
 		// SpritesMng.#val = val;
-		// SpritesMng.#sys = sys;
-		// SpritesMng.#main = main;
-/*
+		SpritesMng.#sys = sys;
+		SpritesMng.#main = main;
 		if (sys.crypto) {
-			SpritesMng.#cachePicMov = SpritesMng.#dec2cachePicMov;
+			// SpritesMng.#cachePicMov = SpritesMng.#dec2cachePicMov;
 			SpritesMng.#cacheAniSpr = SpritesMng.#dec2cacheAniSpr;
 		}
-*/
+
 		const fnc = ()=> {
 			const vol = SpritesMng.#glbVol * SpritesMng.#movVol;
 			for (const v of Object.values(SpritesMng.#hFn2VElm)) v.volume = vol;
@@ -105,6 +104,8 @@ export class SpritesMng {
 
 	//static #ldrHFn: {[fn: string]: 1} = {};
 	static #csv2Sprites(csv: string, fncFirstComp: IFncCompSpr, fncAllComp: (isStop: boolean)=> void, addChild: (sp: Sprite)=> void): boolean {
+		if (! csv) return false;
+
 		let needLoad = false;
 		if (csv.startsWith('data:')) {	// Data URI
 			needLoad = ! Assets.cache.has(csv);
@@ -121,19 +122,24 @@ export class SpritesMng {
 		}
 
 		const a = csv.split(',');
-		if (a.length === 0) return false;
-
-		a.forEach(fn=> {
-			if (Assets.cache.has(fn)) return;
+		a.forEach(alias=> {
+			if (Assets.cache.has(alias)) return;
+			if (alias in SpritesMng.#hFn2ResAniSpr) return;
 
 			needLoad = true;
-			Assets.add({alias: fn, src: SpritesMng.#cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SP_GSM)});
+			try {
+				Assets.add({alias, src: SpritesMng.#cfg.searchPath(alias, SEARCH_PATH_ARG_EXT.SP_GSM)});
+			} catch (e) {
+				this.#main.errScript(`画像/動画ロード失敗です csv2Sprites fn:${alias} ${e}`, false)
+			}
 		});
-		Assets.load(a).then(()=> {
-			a.forEach((fn0, i)=> {
+		Assets.load(a).then(async rUa=> {
+			a.forEach((alias, i)=> {
+				SpritesMng.#cacheAniSpr(rUa, alias);
+
 				// 差分絵を重ねる
-				const {dx, dy, blendmode, fn} = SpritesMng.#hFace[fn0] ?? {
-					fn	: fn0,
+				const {dx, dy, blendmode, fn} = SpritesMng.#hFace[alias] ?? {
+					fn	: alias,
 					dx	: 0,
 					dy	: 0,
 					blendmode	: 'normal',
@@ -148,93 +154,33 @@ export class SpritesMng {
 				};
 			});
 			fncAllComp(needLoad);
-
-			//TODO: スプライト系
-//			if (fn in SpritesMng.#hFn2ResAniSpr) {}
-			
 		});
-
-/*
-		const aComp: {fn: string, fnc: IFncCompSpr}[] = [];
-		const ldr = new Loader;
-		csv.split(',').forEach((fn0, i)=> {
-			if (! fn0) throw 'face属性に空要素が含まれます';
-
-			// 差分絵を重ねる
-			const {dx, dy, blendmode, fn} = SpritesMng.#hFace[fn0] || {
-				fn	: fn0,
-				dx	: 0,
-				dy	: 0,
-				blendmode	: 'normal'
-			};
-			const fnc = (i === 0) ?fncFirstComp :(sp: Sprite)=> {
-				sp.x = dx;
-				sp.y = dy;
-				sp.blendMode = blendmode;
-			};
-			aComp.push({fn, fnc});
-
-			if (fn in SpritesMng.#hFn2ResAniSpr) return;
-//			if (fn in TextureCache) return;
-			//if (fn in BaseTextureCache) return;		// 警告に変化なし
-//			if (fn in Loader.shared.resources) return;
-			//if (fn in SpritesMng.#ldrHFn) {
-				// ここに来るという中途半端な状態がある。お陰で警告が出てしまう
-				// （警告を消そうとする）以下の試みは効かない。直前の if でそもそもここに来ない
-				//	Texture.removeFromCache(fn);
-				//	delete TextureCache[fn];
-				//	delete Loader.shared.resources[fn];
-				// return;	// これは厳禁、御法度。
-					// 画像ボタンや文字ボタン背景で同じ画像を、間を置かずロードした場合に最初一つしか表示されなくなる。以下は確認用ギャラリー
-					// http://localhost:8082/index.html?cur=ch_button
-			//}
-			//SpritesMng.#ldrHFn[fn] = 1;
-
-			needLoad = true;
-			const url = SpritesMng.#cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SP_GSM);
-			const xt = this.#sys.crypto
-			? {xhrType: (url.slice(-5) === '.json')
-				? LoaderResource.XHR_RESPONSE_TYPE.TEXT
-				: LoaderResource.XHR_RESPONSE_TYPE.BUFFER}
-			: {};
-			ldr.add({...xt, name: fn, url});
-		});
-
-		const fncLoaded = (_: any, hRes: {[fn: string]: LoaderResource})=> {
-			for (const {fn, fnc} of aComp) {
-				const sp = SpritesMng.#mkSprite(fn, hRes);
-				sp.label = fn;	// 4 Debug?
-				addChild(sp);
-				fnc(sp);
-			}
-			fncAllComp(needLoad);
-		}
-		if (needLoad) {
-			ldr.use(async (res, next)=> {
-				try {
-					if (res.extension === 'json') {
-						const str = await this.#sys.dec('json', res.data);
-						SpritesMng.#cacheAniSpr(str, res, next);
-						return;
-					}
-
-					const aiv = await this.#sys.decAB(res.data);
-					SpritesMng.#cachePicMov(aiv, res, next);
-				} catch (e) {
-					const mes = `画像/動画ロード失敗です fn:${res.name} ${e}`;
-					if (SpritesMng.#evtMng.isSkipping) console.warn(mes); else console.error('%c'+ mes, 'color:#FF3300;');
-				//	if (SpritesMng.#evtMng.isSkipping) console.warn(mes); else this.#main.errScript(mes, false);
-				}
-			})
-			.load(fncLoaded);
-		}
-		else fncLoaded(0, {});
-*/
 
 		return needLoad;
 	}
 	static	#hFace			: Ihface	= {};
 	static	#hFn2ResAniSpr	: {[fn: string]: IResAniSpr} = {};
+
+	static #cacheAniSpr = (rUa: Record<string, any>, alias: string)=> {
+		if (rUa[alias].isTexture ||
+			alias in SpritesMng.#hFn2ResAniSpr) return
+
+		const {_frameKeys, data: {meta}} = rUa[alias];
+		SpritesMng.#sortAFrameName(_frameKeys);
+		SpritesMng.#hFn2ResAniSpr[alias] = {meta, _frameKeys};
+	};
+		static #sortAFrameName(aFn: string[]) {
+			const a_base_name = /([^\d]+)\d+\.(\w+)/.exec(aFn[0]);
+			if (! a_base_name) return;
+
+			const is = a_base_name[1].length;
+			const ie = -a_base_name[2].length -1;
+			aFn.sort((a, b)=> int(a.slice(is, ie)) > int(b.slice(is, ie)) ?1 :-1);
+		}
+
+	static #dec2cacheAniSpr(rUa: Record<string, any>, alias: string) {
+	}
+
 
 
 /*
@@ -246,14 +192,6 @@ export class SpritesMng {
 				SpritesMng.#hFn2VElm[name] = SpritesMng.#charmVideoElm(hve);
 		}
 		next();
-	}
-	static #sortAFrameName(aFn: string[]): string[] {
-		const a_base_name = /([^\d]+)\d+\.(\w+)/.exec(aFn[0]);
-		if (! a_base_name) return [];
-
-		const is = a_base_name[1].length;
-		const ie = -a_base_name[2].length -1;
-		return aFn.sort((a, b)=> int(a.slice(is, ie)) > int(b.slice(is, ie)) ?1 :-1);
 	}
 
 	static async #dec2cachePicMov(r: SYS_DEC_RET, res: any, next: ()=> void) {
@@ -289,16 +227,13 @@ export class SpritesMng {
 		return v;
 	}
 
-	static #cacheAniSpr = (_r: string, {type, spritesheet, name, data}: any, next: ()=> void)=> {
-		switch (type) {
-			case LoaderResource.TYPE.JSON:	// switchは必須
-				const aFn: string[] = spritesheet._frameKeys;
-				SpritesMng.#sortAFrameName(aFn);
-				SpritesMng.#hFn2ResAniSpr[name] = {
-					aTex: aFn.map(fn=> Texture.from(fn)),
-					meta: data.meta,
-				};
-		}
+	static #cacheAniSpr = (_r: string, {spritesheet, name, data}: any, next: ()=> void)=> {
+		const aFn: string[] = spritesheet._frameKeys;
+		SpritesMng.#sortAFrameName(aFn);
+		SpritesMng.#hFn2ResAniSpr[name] = {
+			aTex: aFn.map(fn=> Texture.from(fn)),
+			meta: data.meta,
+		};
 		next();
 	}
 
@@ -342,10 +277,11 @@ export class SpritesMng {
 	}
 */
 
+
 	static #mkSprite(fn: string): Sprite {
 		const ras = SpritesMng.#hFn2ResAniSpr[fn];
 		if (ras) {
-			const asp = new AnimatedSprite(ras.aTex);
+			const asp = AnimatedSprite.fromFrames(ras._frameKeys);
 			asp.animationSpeed = ras.meta.animationSpeed ?? 1.0;
 			asp.play();
 			return asp;

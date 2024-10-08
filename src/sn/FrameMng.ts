@@ -224,7 +224,7 @@ export class FrameMng implements IGetFrm {
 		};
 
 		const src = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
-		if (FrameMng.#sys.crypto && getExt(src) === 'bin') {
+		if (FrameMng.#sys.crypto && src.endsWith('.bin')) {
 			Assets.load({alias, src, loadParser: 'loadTxt'}).then(async d=> {
 				try {
 					const r = await FrameMng.#sys.decAB(d);

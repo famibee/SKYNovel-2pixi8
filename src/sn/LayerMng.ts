@@ -412,19 +412,16 @@ export class LayerMng implements IGetFrm, IRecorder {
 		const join = argChk_Boolean(hArg, 'join', true);
 
 		if (join) disableEvent();
-		switch (getExt(fn)) {
-			case 'css':		// 読み込んで<style>に追加
-				(async ()=> {
-					const res = await fetch(fn);
-					if (! res.ok) throw new Error('Network response was not ok.');
+		if (fn.endsWith('.css')) {
+			(async ()=> {
+				const res = await fetch(fn);
+				if (! res.ok) throw new Error('Network response was not ok.');
 
-					addStyle(await res.text());
-					if (join) enableEvent();
-				})();
-				break;
-
-			default:	throw 'サポートされない拡張子です'
+				addStyle(await res.text());
+				if (join) enableEvent();
+			})();
 		}
+		else throw 'サポートされない拡張子です';
 
 		return join;
 	}
