@@ -61,7 +61,7 @@ export class SysBase implements ISysRoots, ISysBase {
 	readonly	#pixiExt_binpic = {	// 実質アニメスプライト専用
 		extension: {
 			type: ExtensionType.LoadParser,
-			name: 'pic-dec-loader',
+			name: 'binpic-dec-loader',
 			priority: 99,
 		},
 		test: (url: string)=> /\.(?:bin|jpe?g|png)$/.test(url),
