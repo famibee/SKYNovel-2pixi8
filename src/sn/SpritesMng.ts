@@ -37,18 +37,14 @@ interface IResAniSpr {
 export class SpritesMng {
 	static	#cfg	: Config;
 	// static	#val	: IVariable;
-	static	#sys	: SysBase;
+	// static	#sys	: SysBase;
 	static	#main	: IMain;
-	static	init(cfg: Config, _val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
+	static	init(cfg: Config, _val: IVariable, _sys: SysBase, main: IMain, sndMng: SoundMng) {
 //	static	init(cfg: Config, val: IVariable, sys: SysBase, main: IMain, sndMng: SoundMng) {
 		SpritesMng.#cfg = cfg;
 		// SpritesMng.#val = val;
-		SpritesMng.#sys = sys;
+		// SpritesMng.#sys = sys;
 		SpritesMng.#main = main;
-		if (sys.crypto) {
-			// SpritesMng.#cachePicMov = SpritesMng.#dec2cachePicMov;
-			SpritesMng.#cacheAniSpr = SpritesMng.#dec2cacheAniSpr;
-		}
 
 		const fnc = ()=> {
 			const vol = SpritesMng.#glbVol * SpritesMng.#movVol;
@@ -126,16 +122,23 @@ export class SpritesMng {
 			if (Assets.cache.has(alias)) return;
 			if (alias in SpritesMng.#hFn2ResAniSpr) return;
 
-			needLoad = true;
 			try {
 				Assets.add({alias, src: SpritesMng.#cfg.searchPath(alias, SEARCH_PATH_ARG_EXT.SP_GSM)});
+				needLoad = true;
 			} catch (e) {
 				this.#main.errScript(`画像/動画ロード失敗です csv2Sprites fn:${alias} ${e}`, false)
 			}
 		});
-		Assets.load(a).then(async rUa=> {
+		Assets.load(a).then(rUa=> {
 			a.forEach((alias, i)=> {
-				SpritesMng.#cacheAniSpr(rUa, alias);
+				const ua = rUa[alias];
+				const {_frameKeys} = ua;
+//console.log(`fn:SpritesMng.ts line:138 alias:${alias} _frameKeys:%o B:${! (alias in SpritesMng.#hFn2ResAniSpr)} g:%o`, _frameKeys, ua);
+				if (_frameKeys && ! (alias in SpritesMng.#hFn2ResAniSpr)) {
+					const {data: {meta}} = ua;
+					SpritesMng.#sortAFrameName(_frameKeys);
+					SpritesMng.#hFn2ResAniSpr[alias] = {meta, _frameKeys};
+				}
 
 				// 差分絵を重ねる
 				const {dx, dy, blendmode, fn} = SpritesMng.#hFace[alias] ?? {
@@ -161,14 +164,6 @@ export class SpritesMng {
 	static	#hFace			: Ihface	= {};
 	static	#hFn2ResAniSpr	: {[fn: string]: IResAniSpr} = {};
 
-	static #cacheAniSpr = (rUa: Record<string, any>, alias: string)=> {
-		if (rUa[alias].isTexture ||
-			alias in SpritesMng.#hFn2ResAniSpr) return
-
-		const {_frameKeys, data: {meta}} = rUa[alias];
-		SpritesMng.#sortAFrameName(_frameKeys);
-		SpritesMng.#hFn2ResAniSpr[alias] = {meta, _frameKeys};
-	};
 		static #sortAFrameName(aFn: string[]) {
 			const a_base_name = /([^\d]+)\d+\.(\w+)/.exec(aFn[0]);
 			if (! a_base_name) return;
@@ -177,9 +172,6 @@ export class SpritesMng {
 			const ie = -a_base_name[2].length -1;
 			aFn.sort((a, b)=> int(a.slice(is, ie)) > int(b.slice(is, ie)) ?1 :-1);
 		}
-
-	static #dec2cacheAniSpr(rUa: Record<string, any>, alias: string) {
-	}
 
 
 
@@ -288,7 +280,7 @@ export class SpritesMng {
 		}
 		if (fn in SpritesMng.#hFn2VElm) return Sprite.from(SpritesMng.#hFn2VElm[fn]);
 
-		const tx: Texture | undefined = Assets.get(fn);
+		const tx: Texture | undefined = Assets.cache.get(fn);
 		return tx ?Sprite.from(tx) :new Sprite;
 	}
 	static #hFn2VElm	: {[fn: string]: HTMLVideoElement} = {};

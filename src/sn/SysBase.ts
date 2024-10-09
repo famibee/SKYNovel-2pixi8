@@ -7,13 +7,13 @@
 
 import {IHTag, ITag} from './Grammar';
 import {IVariable, ISysBase, IData4Vari, HPlugin, HSysBaseArg, ILayerFactory, IMain, IFire, IFncHook, PLUGIN_DECAB_RET, T_PLUGIN_INFO} from './CmnInterface';
-import {argChk_Boolean, CmnLib} from './CmnLib';
+import {argChk_Boolean, CmnLib, getFn} from './CmnLib';
 import {EventListenerCtn} from './EventListenerCtn';
 import {Main} from './Main';
 
-import {Application, Container, RenderTexture} from 'pixi.js';
+import {Application, Container, extensions, ExtensionType, RenderTexture, Texture} from 'pixi.js';
 import {io, Socket} from 'socket.io-client';
-import {IConfig, IFn2Path, ISysRoots} from './ConfigBase';
+import {IConfig, IFn2Path, ISysRoots, SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
 
 export class SysBase implements ISysRoots, ISysBase {
@@ -23,6 +23,11 @@ export class SysBase implements ISysRoots, ISysBase {
 
 	constructor(readonly hPlg: HPlugin = {}, protected arg: HSysBaseArg) {}
 	protected async loaded(hPlg: HPlugin, _arg: HSysBaseArg) {
+		if (this.crypto) {
+			extensions.add(this.#pixiExt_binpic);
+			extensions.add(this.#PixiExt_json);
+		}
+
 		const fncPre = hPlg.snsys_pre;	// prj・path.json_ の為に先読み
 		delete hPlg.snsys_pre;
 		return fncPre?.init({
@@ -44,7 +49,67 @@ export class SysBase implements ISysRoots, ISysBase {
 	get crypto() {return this.arg.crypto}
 	fetch = (url: string, init?: RequestInit)=> fetch(url, init);
 
-	destroy() {this.elc.clear()}
+	destroy() {
+		this.elc.clear();
+		if (this.crypto) {
+			extensions.remove(this.#pixiExt_binpic);
+			extensions.remove(this.#PixiExt_json);
+		}
+	}
+
+
+	readonly	#pixiExt_binpic = {	// 実質アニメスプライト専用
+		extension: {
+			type: ExtensionType.LoadParser,
+			name: 'pic-dec-loader',
+			priority: 99,
+		},
+		test: (url: string)=> /\.(?:bin|jpe?g|png)$/.test(url),
+		load: (url: string)=> new Promise(async (re, rj)=> {
+			if (! url.endsWith('.bin')) url = this.cfg.searchPath(getFn(url), SEARCH_PATH_ARG_EXT.SP_GSM);
+
+			const res = await this.fetch(url);
+			if (! res.ok) {
+				console.error(`pic-dec-loader err `+ res.statusText);
+				rj();
+				return;
+			}
+
+			const f = await this.decAB(await res.arrayBuffer());
+			if (f instanceof HTMLElement) {
+				// == HTMLImageElement, HTMLVideoElement
+
+				// const t = Texture.from(new CanvasSource(f));	// no warn
+				// 			but, INVALID_VALUE: texImage2D: no canvas
+				// const t = Texture.from(CanvasSource.from(f));	// warn
+				const t = Texture.from(f);	// warn
+					// PixiJS Warning:  ImageSource: Image element passed, converting to canvas. Use CanvasSource instead.
+				re(t);
+				return
+			}
+
+			re(f);	// 音系
+		}),
+	};
+	readonly	#PixiExt_json = {
+		extension: {
+			type: ExtensionType.LoadParser,
+			name: 'json-dec-loader',
+			priority: 99,
+		},
+		test: (url: string)=> url.endsWith('.json'),
+		load: (url: string)=> new Promise(async (re, rj)=> {
+			const res = await this.fetch(url);
+			if (! res.ok) {
+				console.error(`json-dec-loader err `+ res.statusText);
+				rj();
+				return;
+			}
+
+			re(JSON.parse(await this.dec('json', await res.text())));
+		}),
+	};
+
 
 	resolution	= 1;
 

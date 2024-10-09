@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, getDateStr, uint, IEvtMng, argChk_Boolean, argChk_Num, getExt, addStyle, argChk_Color} from './CmnLib';
+import {CmnLib, getDateStr, uint, IEvtMng, argChk_Boolean, argChk_Num, addStyle, argChk_Color} from './CmnLib';
 import {CmnTween} from './CmnTween';
 import {IHTag, HArg} from './Grammar';
 import {IVariable, IMain, HIPage, IGetFrm, IPropParser, IRecorder} from './CmnInterface';
@@ -374,11 +374,10 @@ export class LayerMng implements IGetFrm, IRecorder {
 	#snapshot4web(hArg: HArg, url: string, width: number, height: number): boolean {
 		disableEvent();
 		const b_color = argChk_Color(hArg, 'b_color', this.#bg_color);
-		const ext = getExt(url);
 		autoDetectRenderer({
 			width,
 			height,
-			backgroundAlpha: (b_color > 0x1000000) && (ext === 'png') ?0 :1,
+			backgroundAlpha: b_color > 0x1000000 && url.endsWith('.png') ?0 :1,
 			antialias: argChk_Boolean(hArg, 'smoothing', false),
 			preserveDrawingBuffer: true,
 			backgroundColor: b_color & 0xFFFFFF,
