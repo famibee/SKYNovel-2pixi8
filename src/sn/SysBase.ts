@@ -69,26 +69,24 @@ export class SysBase implements ISysRoots, ISysBase {
 			if (! url.endsWith('.bin')) url = this.cfg.searchPath(getFn(url), SEARCH_PATH_ARG_EXT.SP_GSM);
 
 			const res = await this.fetch(url);
-			if (! res.ok) {
-				console.error(`pic-dec-loader err `+ res.statusText);
-				rj();
-				return;
-			}
+			if (! res.ok) {rj(`binpic-dec-loader fetch err:`+ res.statusText); return}
 
-			const f = await this.decAB(await res.arrayBuffer());
-			if (f instanceof HTMLElement) {
-				// == HTMLImageElement, HTMLVideoElement
+			try {
+				const f = await this.decAB(await res.arrayBuffer());
+				if (f instanceof HTMLElement) {
+					// == HTMLImageElement, HTMLVideoElement
 
-				// const t = Texture.from(new CanvasSource(f));	// no warn
-				// 			but, INVALID_VALUE: texImage2D: no canvas
-				// const t = Texture.from(CanvasSource.from(f));	// warn
-				const t = Texture.from(f);	// warn
-					// PixiJS Warning:  ImageSource: Image element passed, converting to canvas. Use CanvasSource instead.
-				re(t);
-				return
-			}
+					// const t = Texture.from(new CanvasSource(f));	// no warn
+					// 			but, INVALID_VALUE: texImage2D: no canvas
+					// const t = Texture.from(CanvasSource.from(f));	// warn
+					const t = Texture.from(f);	// warn
+						// PixiJS Warning:  ImageSource: Image element passed, converting to canvas. Use CanvasSource instead.
+					re(t);
+					return
+				}
 
-			re(f);	// 音系
+				re(f);	// 音系
+			} catch (e) {rj(`binpic-dec-loader err url:${url} ${e}`)}
 		}),
 	};
 	readonly	#PixiExt_json = {
@@ -100,13 +98,11 @@ export class SysBase implements ISysRoots, ISysBase {
 		test: (url: string)=> url.endsWith('.json'),
 		load: (url: string)=> new Promise(async (re, rj)=> {
 			const res = await this.fetch(url);
-			if (! res.ok) {
-				console.error(`json-dec-loader err `+ res.statusText);
-				rj();
-				return;
-			}
+			if (! res.ok) {rj(`json-dec-loader fetch err:`+ res.statusText); return}
 
-			re(JSON.parse(await this.dec('json', await res.text())));
+			try {
+				re(JSON.parse(await this.dec('json', await res.text())));
+			} catch (e) {rj(`json-dec-loader err url:${url} ${e}`)}
 		}),
 	};
 

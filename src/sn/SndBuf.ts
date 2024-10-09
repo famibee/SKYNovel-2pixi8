@@ -9,13 +9,12 @@ import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
 import {IVariable, IMain} from './CmnInterface';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {Config} from './Config';
-import {SysBase} from './SysBase';
 import {HArg} from './Grammar';
 import {CmnTween} from './CmnTween';
 import {disableEvent, enableEvent} from './ReadState';
 
 import {Assets} from 'pixi.js';
-import {sound, Sound, Options, filters} from '@pixi/sound';
+import {sound, Sound, Options, filters, LoadedCallback} from '@pixi/sound';
 import {Tween, remove} from '@tweenjs/tween.js'
 
 class SndInf {
@@ -40,7 +39,7 @@ class SndInf {
 		this.stt.onLoad(this);
 		if (this.pan !== 0) snd.filters = [new filters.StereoFilter(this.pan)];
 
-		this.volume = vol=> {snd.volume = vol}
+		this.volume = vol=> snd.volume = vol;
 		this.tw = ()=> new Tween(snd);
 		this.stop = ()=> snd.stop();
 		this.destroy = ()=> snd.destroy();
@@ -56,17 +55,15 @@ class SndInf {
 let cfg	: Config;
 let val	: IVariable;
 let main: IMain;
-let sys	: SysBase;
 let evtMng	: IEvtMng;
 
 export class SndBuf {
 	static	#hLP	: {[buf: string]: string}	= {};
-	static	init($cfg: Config, $val: IVariable, $main: IMain, $sys: SysBase) {
+	static	init($cfg: Config, $val: IVariable, $main: IMain) {
 		SndBuf.#hLP = {};
 		cfg	= $cfg;
 		val	= $val;
 		main= $main;
-		sys	= $sys;
 	}
 	static	setEvtMng($evtMng: IEvtMng) {evtMng = $evtMng}
 	static	delLoopPlay(buf: string): void {
@@ -82,8 +79,7 @@ export class SndBuf {
 		if (vol > 1) return 1;
 		return vol;
 	}
-	static	xchgbuf(hArg: HArg) {
-		const {buf: buf1 = 'SE', buf2 = 'SE'} = hArg;
+	static	xchgbuf({buf: buf1 = 'SE', buf2 = 'SE'}: HArg) {
 		if (buf1 === buf2) throw `[xchgbuf] buf:${buf1} が同じ値です`;
 
 		const n1 = 'const.sn.sound.'+ buf1 +'.';
@@ -255,7 +251,7 @@ export class SndBuf {
 		const join = argChk_Boolean(hArg, 'join', true);
 		if (join) {
 			disableEvent();
-			const old = o.loaded!;
+			const old: LoadedCallback = o.loaded!;
 			o.loaded = (e, s2)=> {
 				if (! this.#sb.stt.isDestroy) old(e, s2);
 				enableEvent();
@@ -269,28 +265,24 @@ export class SndBuf {
 		sound.volumeAll = Number(val.getVal('sys:sn.sound.global_volume', 1));
 		this.#initVol = ()=> {};
 	};
-	#playseSub(fn: string, o: Options): void {
+	#playseSub(fn: string, o: Options) {
 		const src = cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SOUND);
-		if (! src.endsWith('.bin')) {
-			o.url = src;
-			Sound.from(o);
-			return;
-		}
+		if (! src.endsWith('.bin')) {o.url = src; Sound.from(o); return}
 
-		Assets.load({alias: ':snd:'+ fn, src}).then(async b=> {
-			try {
-				o.source = <ArrayBuffer><unknown>(await sys.decAB(b));
-				Sound.from(o);
-			} catch (e) {
-				main.errScript(`Sound ロード失敗ですc fn:${fn} ${e}`, false);
-			}
-		});
+		const fnc = (ab0: ArrayBuffer)=> {
+			o.source = structuredClone(ab0);	// ディープコピー必須
+			Sound.from(o);
+		};
+
+		const alias = ':snd:'+ fn;
+		const ab = <ArrayBuffer | undefined>Assets.cache.get(alias);
+		if (ab) fnc(ab);
+		else Assets.load({alias, src}).then(fnc);
 	}
 
 
 	ws =(hArg: HArg)=> this.#sb.stt.ws(this.#sb, hArg);
-	stopse(hArg: HArg) {
-		const {buf = 'SE'} = hArg;
+	stopse({buf = 'SE'}: HArg) {
 		stop2var(this.#sb, buf);
 		this.#sb.stt.stopse(this.#sb);
 	}
@@ -303,8 +295,8 @@ export class SndBuf {
 
 
 // =================================================
-function stop2var(sb: SndInf, buf: string): void {
-	if (sb.loop) SndBuf.delLoopPlay(buf);
+function stop2var({loop}: SndInf, buf: string): void {
+	if (loop) SndBuf.delLoopPlay(buf);
 	else {
 		const vn = 'const.sn.sound.'+ buf +'.';
 		val.setVal_Nochk('tmp', vn +'playing', false);

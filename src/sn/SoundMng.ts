@@ -9,17 +9,15 @@ import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
 import {IHTag, HArg} from './Grammar';
 import {IVariable, IMain, INoticeChgVolume} from './CmnInterface';
 import {Config} from './Config';
-import {SysBase} from './SysBase';
 import {SndBuf} from './SndBuf';
 
 import {sound, utils} from '@pixi/sound';
-import {Assets} from 'pixi.js';
 
 
 export class SoundMng {
 	#hSndBuf	: {[buf: string]: SndBuf}	= {};
 
-	constructor(cfg: Config, hTag: IHTag, readonly val: IVariable, main: IMain, sys: SysBase) {
+	constructor(cfg: Config, hTag: IHTag, readonly val: IVariable, main: IMain) {
 		hTag.volume		= o=> this.#volume(o);		// 音量設定（独自拡張）
 		hTag.fadebgm	= o=> this.#fadebgm(o);		// BGMのフェード
 		hTag.fadeoutbgm	= o=> this.#fadeoutbgm(o);	// BGMのフェードアウト
@@ -41,7 +39,7 @@ export class SoundMng {
 
 		val.setVal_Nochk('tmp', 'const.sn.sound.codecs', JSON.stringify(utils.supported));
 
-		SndBuf.init(cfg, val, main, sys);
+		SndBuf.init(cfg, val, main);
 		sound.disableAutoPause = true;
 	}
 
@@ -108,9 +106,9 @@ export class SoundMng {
 		if (! fn) throw `fnは必須です buf:${buf}`;
 
 		// キャッシュ削除
-		const sb0 = this.#hSndBuf[buf];
-		const alias = ':snd:'+ fn;
-		if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging') && Assets.cache.has(alias)) Assets.unload(alias);
+		// const sb0 = this.#hSndBuf[buf];
+		// const alias = ':snd:'+ fn;
+		// if (sb0 && sb0.fn !== fn && ! this.val.getVal('tmp:const.sn.isPaging') && Assets.cache.has(alias)) Assets.unload(alias);
 
 		// isSkipKeyDown()は此処のみとする。タイミングによって変わる
 		if (argChk_Boolean(hArg, 'canskip', true) && this.#evtMng.isSkipping) return false;
