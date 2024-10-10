@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, IEvtMng, argChk_Boolean, argChk_Num, getExt} from './CmnLib';
+import {CmnLib, IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
 import {CmnTween} from './CmnTween';
 import {IHTag, HArg} from './Grammar';
 import {IVariable, IMain, IGetFrm} from './CmnInterface';
@@ -21,11 +21,11 @@ import {Application, Assets, Renderer, Texture} from 'pixi.js';
 export class FrameMng implements IGetFrm {
 	static	#cfg	: Config;
 	static	#sys	: SysBase;
-	static	#main	: IMain;
-	static	init(cfg: Config, sys: SysBase, main: IMain): void {
+	// static	#main	: IMain;
+	static	init(cfg: Config, sys: SysBase, _main: IMain): void {
 		FrameMng.#cfg = cfg;
 		FrameMng.#sys = sys;
-		FrameMng.#main = main;
+		// FrameMng.#main = main;
 	}
 
 	constructor(hTag: IHTag, private readonly appPixi: Application, private readonly val: IVariable) {
@@ -75,23 +75,28 @@ export class FrameMng implements IGetFrm {
 		const b_color = hArg.b_color ?` background-color: ${hArg.b_color};` :'';
 		const rct = this.#rect(hArg);
 		// 【sandbox="allow-scripts allow-same-origin"】は必要なのに警告が出るので削除
-		Main.cvs.insertAdjacentHTML('beforebegin', `<iframe id="${id}" style="opacity: ${a
-		}; position: absolute; left:${FrameMng.#sys.ofsLeft4elm +rct.x *FrameMng.#sys.cvsScale
-		}px; top: ${FrameMng.#sys.ofsTop4elm +rct.y *FrameMng.#sys.cvsScale}px; z-index: 1; ${b_color
-		} border: 0px; overflow: hidden; display: ${v ?'inline' :'none'
-		}; transform: scale(${sx}, ${sy}) rotate(${r}deg);" width="${rct.width *FrameMng.#sys.cvsScale}" height="${rct.height *FrameMng.#sys.cvsScale}"></iframe>`);
+		Main.cvs.insertAdjacentHTML('beforebegin', `<iframe id="${id}" style="opacity: ${a}; ${b_color} position: absolute; left:${
+			FrameMng.#sys.ofsLeft4elm +rct.x *FrameMng.#sys.cvsScale
+		}px; top: ${
+			FrameMng.#sys.ofsTop4elm +rct.y *FrameMng.#sys.cvsScale
+		}px; z-index: 1; border: 0px; overflow: hidden; display: ${
+			v ?'inline' :'none'
+		}; transform: scale(${sx}, ${sy}) rotate(${r}deg);" width="${
+			rct.width *FrameMng.#sys.cvsScale
+		}" height="${
+			rct.height *FrameMng.#sys.cvsScale
+		}"></iframe>`);
 
 		disableEvent();
 		const url = FrameMng.#cfg.searchPath(src, SEARCH_PATH_ARG_EXT.HTML);
-		Assets.load({src: url, loadParser: 'loadTxt'}).then(async d=> {
-			if (FrameMng.#sys.crypto) d = await FrameMng.#sys.dec(getExt(url), d);
-
+		Assets.load({src: url}).then(async d=> {
 			const f = document.getElementById(id) as HTMLIFrameElement;
 			this.#hIfrm[id] = f;
 			this.#hDisabled[id] = false;
 
-			const path_parent = url.slice(0, url.lastIndexOf('/') +1);
-			const path_pa_pa = path_parent.slice(0, url.lastIndexOf('/') +1);
+			const iLastSep = url.lastIndexOf('/') +1;
+			const path_parent = url.slice(0, iLastSep);
+			const path_pa_pa = path_parent.slice(0, iLastSep);
 			f.srcdoc = String(d)	// .src はふりーむで問題発生
 			.replace('sn_repRes();', '')	// これはいずれやめる
 			.replaceAll(
@@ -101,8 +106,8 @@ export class FrameMng implements IGetFrm {
 				: m.replace('./', '')	// 「./」は無視
 					.replace(br, br + path_parent)
 			);
-			
-			if (f.srcdoc.indexOf('true/*WEBP*/;') >= 0) f.srcdoc = f.srcdoc.replaceAll(
+
+			if (f.srcdoc.includes('true/*WEBP*/;')) f.srcdoc = f.srcdoc.replaceAll(
 				/data-src="(.+?\.)(?:jpe?g|png)/g,
 				(_, p1)=> `data-src="${p1}webp`
 			);
@@ -128,62 +133,6 @@ export class FrameMng implements IGetFrm {
 				enableEvent();
 			};
 		});
-
-/*
-		const ld = (new Loader)
-		.add({name: src, url, xhrType: LoaderResource.XHR_RESPONSE_TYPE.TEXT});
-		if (FrameMng.#sys.crypto) ld.use(async (res, next)=> {
-			try {
-				res.data = await FrameMng.#sys.dec(res.extension, res.data);
-			} catch (e) {
-				FrameMng.#main.errScript(`[add_frame]Html ロード失敗です src:${res.name} ${e}`, false);
-			}
-			next();
-		});
-		ld.load((_ldr, hRes)=> {
-			const f = document.getElementById(id) as HTMLIFrameElement;
-			this.#hIfrm[id] = f;
-			this.#hDisabled[id] = false;
-
-			const path_parent = url.slice(0, url.lastIndexOf('/') +1);
-			const path_pa_pa = path_parent.slice(0, url.lastIndexOf('/') +1);
-			f.srcdoc = String(hRes[src]?.data)	// .src はふりーむで問題発生
-			.replace('sn_repRes();', '')	// これはいずれやめる
-			.replaceAll(
-				/\s(?:src|href)=(["'])(\S+?)\1/g,	// 【\s】が大事、data-src弾く
-				(m, br, v)=> v.startsWith('../')
-				? m.replace('../', path_pa_pa)
-				: m.replace('./', '')	// 「./」は無視
-					.replace(br, br + path_parent)
-			);
-			
-			if (f.srcdoc.indexOf('true/ *WEBP* /;') >= 0) f.srcdoc = f.srcdoc.replaceAll(
-				/data-src="(.+?\.)(?:jpe?g|png)/g,
-				(_, p1)=> `data-src="${p1}webp`
-			);
-
-			f.onload = ()=> {	// 一度変数に入れてここで設定するのはFirefox対応。ifrm.onloadが二度呼ばれる！
-				// 組み込み変数
-				this.val.setVal_Nochk('tmp', vn, true);
-				this.val.setVal_Nochk('tmp', vn +'.alpha', a);
-				this.val.setVal_Nochk('tmp', vn +'.x', rct.x);
-				this.val.setVal_Nochk('tmp', vn +'.y', rct.y);
-				this.val.setVal_Nochk('tmp', vn +'.scale_x', sx);
-				this.val.setVal_Nochk('tmp', vn +'.scale_y', sy);
-				this.val.setVal_Nochk('tmp', vn +'.rotate', r);
-				this.val.setVal_Nochk('tmp', vn +'.width', rct.width);
-				this.val.setVal_Nochk('tmp', vn +'.height', rct.height);
-				this.val.setVal_Nochk('tmp', vn +'.visible', v);
-
-				const win = f.contentWindow!;
-				this.#evtMng.resvFlameEvent(win);
-				// sn_repRes()をコール。引数は画像ロード処理差し替えメソッド
-				((win as any).sn_repRes)?.((i: HTMLImageElement)=> FrameMng.#loadPic2Img(i.dataset.src ?? '', i));
-
-				enableEvent();
-			};
-		});
-*/
 
 		return true;
 	}
@@ -200,49 +149,31 @@ export class FrameMng implements IGetFrm {
 		);
 	}
 
-	static	#REG_REP_PRM = /\?([^?]+)$/;	// https://regex101.com/r/ZUnoFq/1
-	static	#loadPic2Img(alias: string, img: HTMLImageElement, onload?: (img2: HTMLImageElement)=> void) {
-		const oUrl = this.#hEncImgOUrl[alias];
+	static	#loadPic2Img(src: string, img: HTMLImageElement, onload?: (img2: HTMLImageElement)=> void) {
+		const oUrl = this.#hEncImgOUrl[src];
 		if (oUrl) {img.src = oUrl; return}
 
-		const aImg = this.#hAEncImg[alias];
+		const aImg = this.#hARetImg[src];
 		if (aImg) {aImg.push(img); return}	// load 終了前の駆け込み対応
-		this.#hAEncImg[alias] = [img];
+		this.#hARetImg[src] = [img];
 
-		const srcNoPrm = alias.replace(FrameMng.#REG_REP_PRM, '');
-		const prmSrc = (alias === srcNoPrm) ?'' :alias.slice(srcNoPrm.length);
-		const fncTx2ImgElm = async (tx: Texture)=> {
-			const b64 = await this.rnd.extract.base64(tx);
-			Assets.unload(alias);
-
-			const urlImg = this.#hEncImgOUrl[alias] = b64 + (b64.startsWith('blob:') ?'' :prmSrc);
-			for (const i of this.#hAEncImg[alias]) {
-				i.src = urlImg;
-				if (onload) i.onload = ()=> onload(i);
+		const path = FrameMng.#cfg.searchPath(src, SEARCH_PATH_ARG_EXT.SP_GSM);
+		Assets.load({alias: src, src: path}).then( async (tx: Texture)=> {
+			const srcNoPrm = src.replace(FrameMng.#REG_REP_PRM, '');
+			const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
+			const urlImg = this.#hEncImgOUrl[src] = await this.rnd.extract.base64(tx) + prmSrc;
+			for (const img2 of this.#hARetImg[src]) {
+				img2.src = urlImg;
+				if (onload) img2.onload = ()=> onload(img2);
 			}
-			delete this.#hAEncImg[alias];
-		};
-
-		const src = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
-		if (FrameMng.#sys.crypto && src.endsWith('.bin')) {
-			Assets.load({alias, src, loadParser: 'loadTxt'}).then(async d=> {
-				try {
-					const r = await FrameMng.#sys.decAB(d);
-					if (r instanceof ArrayBuffer) {	// このケースはない予定
-						//fncTx2ImgElm(Texture.from( r , true));
-						return;
-					}
-					fncTx2ImgElm(Texture.from(r, true));
-				} catch (e) {
-					FrameMng.#main.errScript(`GrpLayer loadPic ロード失敗です fn:${alias} ${e}`, false)
-				}
-			});
-		}
-		else Assets.load({alias, src}).then(fncTx2ImgElm);
+			delete this.#hARetImg[src];
+			Assets.unload(src);
+		});
 	}
 	static	rnd :Renderer;
-	static	#hAEncImg		: {[src: string]: HTMLImageElement[]}	= {};
+	static	#hARetImg		: {[src: string]: HTMLImageElement[]}	= {};
 	static	#hEncImgOUrl	: {[src: string]: string}				= {};
+	static	#REG_REP_PRM = /\?([^?]+)$/;	// https://regex101.com/r/ZUnoFq/1
 
 
 	cvsResize() {	// NOTE: フォントサイズはどう変更すべきか

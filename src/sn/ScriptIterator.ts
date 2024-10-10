@@ -803,18 +803,14 @@ export class ScriptIterator {
 		Assets.load(a.map(({fn, src})=> {
 			const alias = ':sn:'+ fn;
 			//if (Assets.cache.has(alias)) ...// まぁいらんかなと
-			Assets.add({alias, src, loadParser: 'loadTxt'});
-
+			Assets.add({alias, src});
 			return alias;
 		})).then(async ()=> {
-			const dec: (d: string)=> Promise<string> = this.sys.crypto
-				? d=> this.sys.dec('sn', d)
-				: d=> Promise.resolve(d);
 			const hRes: {[fn: string]: string} = {};
 			await Promise.allSettled(a.map(async ({fn})=> {
 				try {
 					const alias = ':sn:'+ fn;
-					hRes[fn] = await dec(Assets.get(alias));
+					hRes[fn] = Assets.get(alias);
 					await Assets.unload(alias);
 				} catch (e) {
 					this.main.errScript(`[jump系]snロード失敗です fn:${fn} ${e}`, false);

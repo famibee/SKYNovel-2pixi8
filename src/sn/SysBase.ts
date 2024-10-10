@@ -23,6 +23,8 @@ export class SysBase implements ISysRoots, ISysBase {
 
 	constructor(readonly hPlg: HPlugin = {}, protected arg: HSysBaseArg) {}
 	protected async loaded(hPlg: HPlugin, _arg: HSysBaseArg) {
+		extensions.add(this.#PixiExt_sn);
+		extensions.add(this.#PixiExt_htm);
 		if (this.crypto) {
 			extensions.add(this.#pixiExt_binpic);
 			extensions.add(this.#PixiExt_json);
@@ -51,6 +53,9 @@ export class SysBase implements ISysRoots, ISysBase {
 
 	destroy() {
 		this.elc.clear();
+
+		extensions.remove(this.#PixiExt_sn);
+		extensions.remove(this.#PixiExt_htm);
 		if (this.crypto) {
 			extensions.remove(this.#pixiExt_binpic);
 			extensions.remove(this.#PixiExt_json);
@@ -58,7 +63,7 @@ export class SysBase implements ISysRoots, ISysBase {
 	}
 
 
-	readonly	#pixiExt_binpic = {	// 実質アニメスプライト専用
+	readonly	#pixiExt_binpic = {	// 画像、音声、アニメスプライト画像
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'binpic-dec-loader',
@@ -89,7 +94,7 @@ export class SysBase implements ISysRoots, ISysBase {
 			} catch (e) {rj(`binpic-dec-loader err url:${url} ${e}`)}
 		}),
 	};
-	readonly	#PixiExt_json = {
+	readonly	#PixiExt_json = {	// アニメスプライトjson
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'json-dec-loader',
@@ -103,6 +108,38 @@ export class SysBase implements ISysRoots, ISysBase {
 			try {
 				re(JSON.parse(await this.dec('json', await res.text())));
 			} catch (e) {rj(`json-dec-loader err url:${url} ${e}`)}
+		}),
+	};
+	readonly	#PixiExt_htm = {	// htm
+		extension: {
+			type: ExtensionType.LoadParser,
+			name: 'htm-loader',
+			//priority: 99,
+		},
+		test: (url: string)=> /\.html?$/.test(url),
+		load: (url: string)=> new Promise(async (re, rj)=> {
+			const res = await this.fetch(url);
+			if (! res.ok) {rj(`htm-loader fetch err:`+ res.statusText); return}
+
+			try {
+				re(await this.dec('htm', await res.text()));
+			} catch (e) {rj(`htm-loader err url:${url} ${e}`)}
+		}),
+	};
+	readonly	#PixiExt_sn = {
+		extension: {
+			type: ExtensionType.LoadParser,
+			name: 'sn-loader',
+			//priority: 99,
+		},
+		test: (url: string)=> url.endsWith('.sn'),
+		load: (url: string)=> new Promise(async (re, rj)=> {
+			const res = await this.fetch(url);
+			if (! res.ok) {rj(`sn-loader fetch err:`+ res.statusText); return}
+
+			try {
+				re(await this.dec('sn', await res.text()));
+			} catch (e) {rj(`sn-loader err url:${url} ${e}`)}
 		}),
 	};
 

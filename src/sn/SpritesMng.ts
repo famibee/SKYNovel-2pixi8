@@ -126,7 +126,7 @@ export class SpritesMng {
 				Assets.add({alias, src: SpritesMng.#cfg.searchPath(alias, SEARCH_PATH_ARG_EXT.SP_GSM)});
 				needLoad = true;
 			} catch (e) {
-				this.#main.errScript(`画像/動画ロード失敗です csv2Sprites fn:${alias} ${e}`, false)
+				this.#main.errScript(`画像/動画ロード失敗です SpritesMng.csv2Sprites fn:${alias} ${e}`, false)
 			}
 		});
 		Assets.load(a).then(rUa=> {
@@ -176,6 +176,7 @@ export class SpritesMng {
 
 
 /*
+	//TODO: 暗号化・動画
 	static #cachePicMov = (_r: SYS_DEC_RET, {type, name, data}: any, next: ()=> void)=> {
 		switch (type) {
 			case LoaderResource.TYPE.VIDEO:
@@ -247,7 +248,7 @@ export class SpritesMng {
 				}
 				next2();
 			})
-			.catch(e=> this.#main.errScript(`画像/動画ロード失敗です dec2res4Cripto fn:${res2.name} ${e}`, false));
+			.catch(e=> this.#main.errScript(`画像/動画ロード失敗です SpritesMng.dec2res4Cripto fn:${res2.name} ${e}`, false));
 		})
 		.add({name: fn, url, xhrType: LoaderResource.XHR_RESPONSE_TYPE.BUFFER})
 		.load((ldr, _hRes)=> {

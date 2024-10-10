@@ -161,7 +161,7 @@ export class SndBuf {
 			volume,
 			loaded	: (e, s2)=> {
 				if (this.#sb.stt.isDestroy) return;
-				if (e) {main.errScript(`Sound ロード失敗ですa fn:${fn} ${e}`, false); return}
+				if (e) {main.errScript(`ロード失敗です SndBuf fn:${fn} ${e}`, false); return}
 				if (! s2) return;
 
 				this.#sb.addSnd(s2);
@@ -269,14 +269,14 @@ export class SndBuf {
 		const src = cfg.searchPath(fn, SEARCH_PATH_ARG_EXT.SOUND);
 		if (! src.endsWith('.bin')) {o.url = src; Sound.from(o); return}
 
-		const fnc = (ab0: ArrayBuffer)=> {
-			o.source = structuredClone(ab0);	// ディープコピー必須
+		const fnc = (ab: ArrayBuffer)=> {
+			o.source = structuredClone(ab);	// ディープコピー必須
 			Sound.from(o);
 		};
 
 		const alias = ':snd:'+ fn;
-		const ab = <ArrayBuffer | undefined>Assets.cache.get(alias);
-		if (ab) fnc(ab);
+		if (Assets.cache.has(alias)) fnc(Assets.get(alias));
+			// hasを噛まさないと暗号化時にどうしても警告が出る
 		else Assets.load({alias, src}).then(fnc);
 	}
 

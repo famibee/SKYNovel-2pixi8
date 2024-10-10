@@ -16,7 +16,6 @@ export const enum SEARCH_PATH_ARG_EXT {	// #searchPath 使用時、第二引数�
 	HTML	= 'htm|html',
 	CSS		=	'css',
 	SN		=	'sn',
-	PSD		=	'psd',
 
 	TST_PNGPNG_	= 'png|png_',
 	TST_HH		= 'hh',
@@ -205,7 +204,7 @@ export class ConfigBase implements IConfig {
 			if (utn in this.hPathFn2Exts) {
 				if (extptn === '') fn0 = utn;
 				else for (const e3 of Object.keys(this.hPathFn2Exts[utn])) {
-					if (`|${extptn}|`.indexOf(`|${e3}|`) === -1) continue;
+					if (! `|${extptn}|`.includes(`|${e3}|`)) continue;
 
 					fn0 = utn;
 					break;
@@ -229,19 +228,19 @@ export class ConfigBase implements IConfig {
 			if (hcnt > 1) {
 				let cnt = 0;
 				for (const e2 of Object.keys(h_exts)) {
-					if (search_exts.indexOf(`|${e2}|`) === -1) continue;
+					if (! search_exts.includes(`|${e2}|`)) continue;
 					if (++cnt > 1) throw `指定ファイル【${fn}】が複数マッチします。サーチ対象拡張子群【${extptn}】で絞り込むか、ファイル名を個別にして下さい。`;
 				}
 			}
 			for (let e of Object.keys(h_exts)) {
-				if (search_exts.indexOf(`|${e}|`) > -1) return h_exts[e];
+				if (search_exts.includes(`|${e}|`)) return h_exts[e];
 			}
 			throw `サーチ対象拡張子群【${extptn}】にマッチするファイルがサーチパスに存在しません。探索ファイル名=【${fn}】`;
 		}
 
 		// fnに拡張子xが含まれている
 		//	ファイル名サーチ→拡張子群にxが含まれるか
-		if (extptn !== '' && `|${extptn}|`.indexOf(`|${ext}|`) === -1) {
+		if (extptn !== '' && ! `|${extptn}|`.includes(`|${ext}|`)) {
 			throw `指定ファイルの拡張子【${ext}】は、サーチ対象拡張子群【${extptn}】にマッチしません。探索ファイル名=【${fn}】`;
 		}
 
