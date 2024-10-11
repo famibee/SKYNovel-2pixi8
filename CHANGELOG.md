@@ -1,6 +1,5 @@
-	- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
-		- ただし WebGPU を使わず WebGL に固定
-
+- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
+	- ただし WebGPU を使わず WebGL に固定
 - fix: [trans]処理のリファクタリング
 - fix: startsWith、endsWith を積極使用
 
@@ -11,15 +10,18 @@
 	- TODO:
 		- 暗号化
 			- 動画
-				- 普通の再生で【web2.js:18091 {E} (fn:_album line:146) fnは必須です buf:BGM】
 		- Blendmode まわり
 			- ギャラリーで確認
 		- Filter まわり
 			- ギャラリーで確認
+		- 桜冒頭の[trans]がおかしい
+		- 押しっぱなしでエラー？
+Cannot read properties of null (reading ' resolution' )
+TypeError: Cannot read properties of null (reading
+'resolution')
 		- タグリファレンス更新
 			- [trans]
 				- デフォルト値を vert, frag, wgsl 属性で上書き可能
-		- 押しっぱなしでエラー？
 
 
 - fix: Gamepad のスティック入力が効かなかった件

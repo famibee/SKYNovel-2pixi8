@@ -157,11 +157,11 @@ export class FrameMng implements IGetFrm {
 		if (aImg) {aImg.push(img); return}	// load 終了前の駆け込み対応
 		this.#hARetImg[src] = [img];
 
-		const path = FrameMng.#cfg.searchPath(src, SEARCH_PATH_ARG_EXT.SP_GSM);
-		Assets.load({alias: src, src: path}).then( async (tx: Texture)=> {
-			const srcNoPrm = src.replace(FrameMng.#REG_REP_PRM, '');
-			const prmSrc = (src === srcNoPrm) ?'' :src.slice(srcNoPrm.length);
-			const urlImg = this.#hEncImgOUrl[src] = await this.rnd.extract.base64(tx) + prmSrc;
+		const [srcNoPrm, Prm=''] = src.split('?');
+		const path = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
+		Assets.load({alias: src, src: path}).then(async (tx: Texture)=> {
+			const b64 = await this.rnd.extract.base64(tx);
+			const urlImg = this.#hEncImgOUrl[src] = b64 + (Prm === ''|| b64.startsWith('blob:') || b64.startsWith('data:') ?'' :'?'+ Prm);
 			for (const img2 of this.#hARetImg[src]) {
 				img2.src = urlImg;
 				if (onload) img2.onload = ()=> onload(img2);
@@ -173,7 +173,6 @@ export class FrameMng implements IGetFrm {
 	static	rnd :Renderer;
 	static	#hARetImg		: {[src: string]: HTMLImageElement[]}	= {};
 	static	#hEncImgOUrl	: {[src: string]: string}				= {};
-	static	#REG_REP_PRM = /\?([^?]+)$/;	// https://regex101.com/r/ZUnoFq/1
 
 
 	cvsResize() {	// NOTE: フォントサイズはどう変更すべきか

@@ -458,9 +458,8 @@ export class Layer {
 		}, "visible":"${this.ctn.visible
 		}", "left":${this.ctn.x}, "top":${this.ctn.y
 		}, "alpha":${this.ctn.alpha}, "rotation":${this.ctn.angle
-		}, "blendMode":${this.ctn.blendMode
-		}, "name":"${this.name_}", "scale_x":${this.ctn.scale.x
-		}, "scale_y":${this.ctn.scale.y
+		}, "blendMode":"${this.ctn.blendMode}", "name":"${this.name_
+		}", "scale_x":${this.ctn.scale.x}, "scale_y":${this.ctn.scale.y
 		}, "filters": [${this.aFltHArg.map(f=> `"${f.filter}"`).join(',')}]`;
 	}
 
