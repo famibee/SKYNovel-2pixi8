@@ -151,7 +151,11 @@ export class FrameMng implements IGetFrm {
 
 	static	#loadPic2Img(src: string, img: HTMLImageElement, onload?: (img2: HTMLImageElement)=> void) {
 		const oUrl = this.#hEncImgOUrl[src];
-		if (oUrl) {img.src = oUrl; return}
+		if (oUrl) {
+			img.src = oUrl;
+			if (onload) img.onload = ()=> onload(img);
+			return;
+		}
 
 		const aImg = this.#hARetImg[src];
 		if (aImg) {aImg.push(img); return}	// load 終了前の駆け込み対応
@@ -167,7 +171,6 @@ export class FrameMng implements IGetFrm {
 				if (onload) img2.onload = ()=> onload(img2);
 			}
 			delete this.#hARetImg[src];
-			Assets.unload(src);
 		});
 	}
 	static	rnd :Renderer;

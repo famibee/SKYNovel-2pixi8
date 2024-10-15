@@ -2,6 +2,7 @@
 	- ただし WebGPU を使わず WebGL に固定
 - fix: [trans]処理のリファクタリング
 - fix: startsWith、endsWith を積極使用
+- fix: リファクタリング
 
 		- fix: [playse]系で同じ buf で、ページ移動状態でなく、違う fn を再生する際に再生していたサウンドリソースを破棄するように
 
@@ -9,19 +10,31 @@
 
 	- TODO:
 		- 暗号化
+			- 画像
+				- 警告【PixiJS Warning:  ImageSource: Image element passed, converting to canvas. Use CanvasSource instead.】
+					- Bug: Warning when using Sprite with image file loaded in ArrayBuffer format [Use CanvasSource instead] · Issue #10989 · pixijs/pixijs https://github.com/pixijs/pixijs/issues/10989
 			- 動画
-		- Blendmode まわり
-			- ギャラリーで確認
-		- Filter まわり
-			- ギャラリーで確認
-		- 桜冒頭の[trans]がおかしい
+				- GL_INVALID_OPERATION: The destination level of the destination texture must be defined.
+		- 桜冒頭の[trans]後がおかしい
 		- 押しっぱなしでエラー？
+			- （初音館で確認）{E} (fn:title line:47) [return] スタックが空です
+			- 
 Cannot read properties of null (reading ' resolution' )
 TypeError: Cannot read properties of null (reading
 'resolution')
 		- タグリファレンス更新
 			- [trans]
 				- デフォルト値を vert, frag, wgsl 属性で上書き可能
+		- ギャラリー
+			- ボタンが効かない（通常プロジェクトでは効く）
+				- [button page=fore] + [s] で起こる？
+			- 別のプロジェクト選択でプロジェクト変更しない
+		- ギャラリーで確認
+			- Blendmode まわり
+				http://localhost:8082/index.html?cur=blendmode
+			- Filter まわり
+				http://localhost:8082/index.html?cur=filter
+					→これはボタン効く？？　[l]クリックして読み進めると。
 
 
 - fix: Gamepad のスティック入力が効かなかった件

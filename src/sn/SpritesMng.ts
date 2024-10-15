@@ -8,6 +8,7 @@
 import {Config} from './Config';
 import {IEvtMng, argChk_Boolean, argChk_Num, int} from './CmnLib';
 import {IMain, IVariable} from './CmnInterface';
+import {DebugMng} from './DebugMng';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {SysBase} from './SysBase';
 import {SoundMng} from './SoundMng';
@@ -15,7 +16,6 @@ import {HArg} from './Grammar';
 import {Layer} from './Layer';
 
 import {AnimatedSprite, BLEND_MODES, Container, Sprite, Texture, Assets, VideoSource} from 'pixi.js';
-import { DebugMng } from './DebugMng';
 
 type IFncCompSpr = (sp: Sprite)=> void;
 
@@ -163,11 +163,10 @@ export class SpritesMng {
 				hve.volume = SpritesMng.#glbVol;
 
 				// 【PixiJS】iOSとChromeでAutoPlay可能なビデオSpriteの設定 - Qiita https://qiita.com/masato_makino/items/8316e7743acac514e361
-				// v.muted = true;// Chrome対応：自動再生を許可。ないと再開時に DOMException
 				if (SpritesMng.#val.getVal('const.sn.needClick2Play')) {
 					// ブラウザ実行で、クリックされるまで音声再生が差し止められている状態か。なにかクリックされれば falseになる
 					DebugMng.trace_beforeNew(`[lay系] ${DebugMng.strPos()}未クリック状態で動画を自動再生します。音声はミュートされます`, 'W');
-					hve.muted = true;
+					hve.muted = true;	// Chrome対応：自動再生を許可させるため。ないと再開時に DOMException
 				}
 				hve.setAttribute('playsinline', '');	// iOS対応
 

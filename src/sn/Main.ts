@@ -20,7 +20,7 @@ import {EventMng} from './EventMng';
 import {ScriptIterator} from './ScriptIterator';
 
 import {SysBase} from './SysBase';
-import {Application, Assets, Color} from 'pixi.js';
+import {Application, ApplicationOptions, Assets, Color} from 'pixi.js';
 
 export class Main implements IMain {
 	#cfg		: Config;
@@ -52,29 +52,32 @@ export class Main implements IMain {
 	async #init(c: Config) {
 		this.#cfg = c;
 
-		const cc = document.createElement('canvas')?.getContext('2d');
-		if (! cc) throw '#init err';
-		CmnLib.cc4ColorName = cc;
-
-		const cvs = document.getElementById(this.#SN_ID) as HTMLCanvasElement;
-		if (cvs) cvs.id = '';
-
-		await (this.#appPixi = new Application).init({
+		const hApp: Partial<ApplicationOptions> = {
 			width			: this.#cfg.oCfg.window.width,
 			height			: this.#cfg.oCfg.window.height,
 			backgroundColor	: new Color(this.#cfg.oCfg.init.bg_color),
 			//hello: true,	// webgpu/webgl モードが DevTools に出る
 	//		preference: 'webgpu',	// 優先指定
 			preference: 'webgl',	// 優先指定
-		});
-		Main.cvs = this.#appPixi.canvas;
-		Main.cvs.id = this.#SN_ID;
-		document.body.appendChild(Main.cvs);
+		};
 
+		const cvs = <HTMLCanvasElement>document.getElementById(this.#SN_ID);
 		if (cvs) {
-			Main.cvs.className = cvs.className;
-			Main.cvs.style.cssText = cvs.style.cssText;
+			this.#clone_cvs = <HTMLCanvasElement>cvs.cloneNode(true);
+			this.#clone_cvs.id = this.#SN_ID;
+			hApp.canvas = cvs;
 		}
+
+		await (this.#appPixi = new Application).init(hApp);
+
+		Main.cvs = this.#appPixi.canvas;
+		Main.cvs.id = this.#SN_ID +'_act';
+		if (! cvs) document.body.appendChild(Main.cvs);
+
+
+		const cc = document.createElement('canvas')?.getContext('2d');
+		if (! cc) throw '#init cc err';
+		CmnLib.cc4ColorName = cc;
 
 
 		// 変数
@@ -269,8 +272,8 @@ export class Main implements IMain {
 			Main.cvs.parentNode!.appendChild(this.#clone_cvs);
 		}
 		Assets.cache.reset();
-		this.#appPixi.destroy(true);
 		this.sys.destroy();
+		this.#appPixi.destroy(true);
 	}
 	#destroyed = false;
 	readonly isDestroyed = ()=> this.#destroyed;

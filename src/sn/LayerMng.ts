@@ -737,8 +737,7 @@ fn mainFrag(
 		const aLayFore: Layer[] = [];
 		for (const ln of this.#getLayers(layer)) {
 			sDoTrans.add(ln);
-			const lay = this.#hPages[ln].fore;
-			aLayFore.push(lay);
+			aLayFore.push(this.#hPages[ln].fore);
 		}
 
 		const comp = async ()=> {

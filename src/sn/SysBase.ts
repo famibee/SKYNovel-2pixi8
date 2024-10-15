@@ -11,7 +11,7 @@ import {argChk_Boolean, CmnLib, getFn} from './CmnLib';
 import {EventListenerCtn} from './EventListenerCtn';
 import {Main} from './Main';
 
-import {Application, Container, extensions, ExtensionType, RenderTexture, Texture} from 'pixi.js';
+import {Application, Container, extensions, ExtensionType, LoaderParserPriority, RenderTexture, Texture} from 'pixi.js';
 import {io, Socket} from 'socket.io-client';
 import {IConfig, IFn2Path, ISysRoots, SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
@@ -54,12 +54,13 @@ export class SysBase implements ISysRoots, ISysBase {
 	destroy() {
 		this.elc.clear();
 
-		extensions.remove(this.#PixiExt_sn);
-		extensions.remove(this.#PixiExt_htm);
-		if (this.crypto) {
-			extensions.remove(this.#pixiExt_binpic);
-			extensions.remove(this.#PixiExt_json);
-		}
+		// ギャラリーで再度 add できなくなるようなので
+		// extensions.remove(this.#PixiExt_sn);
+		// extensions.remove(this.#PixiExt_htm);
+		// if (this.crypto) {
+		// 	extensions.remove(this.#pixiExt_binpic);
+		// 	extensions.remove(this.#PixiExt_json);
+		// }
 	}
 
 
@@ -67,7 +68,7 @@ export class SysBase implements ISysRoots, ISysBase {
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'binpic-dec-loader',
-			priority: 99,
+			priority: LoaderParserPriority.High,
 		},
 		test: (url: string)=> /\.(?:bin|jpe?g|png)$/.test(url),
 		load: (url: string)=> new Promise(async (re, rj)=> {
@@ -77,13 +78,38 @@ export class SysBase implements ISysRoots, ISysBase {
 			if (! res.ok) {rj(`binpic-dec-loader fetch err:`+ res.statusText); return}
 
 			try {
+/*
+				const {ext_num, ab} = await this.#plgDecAB(await res.arrayBuffer());
+console.log(`fn:SysBase.ts line:82 url:${url} ext_num:${ext_num}`);
+				switch (ext_num) {
+					case 1:
+					case 2:
+					case 3:
+					case 4:
+						const t = Texture.from({
+							resource: ab,
+							width: 2,
+							height: 2,
+						});
+console.log(`fn:SysBase.ts line:93 `);
+						re(t);
+						return
+
+					default:
+						break;
+				}
+				re(ab);
+*/
 				const f = await this.decAB(await res.arrayBuffer());
+			//	if (f instanceof HTMLImageElement) {
 				if (f instanceof HTMLElement) {
 					// == HTMLImageElement, HTMLVideoElement
 
 					// const t = Texture.from(new CanvasSource(f));	// no warn
 					// 			but, INVALID_VALUE: texImage2D: no canvas
 					// const t = Texture.from(CanvasSource.from(f));	// warn
+					//const t = new Texture({source: new CanvasSource(f)});	// no canvas
+					//const t = new Texture({source: CanvasSource.from(f)});	// warn
 					const t = Texture.from(f);	// warn
 						// PixiJS Warning:  ImageSource: Image element passed, converting to canvas. Use CanvasSource instead.
 					re(t);
@@ -98,7 +124,7 @@ export class SysBase implements ISysRoots, ISysBase {
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'json-dec-loader',
-			priority: 99,
+			priority: LoaderParserPriority.High,
 		},
 		test: (url: string)=> url.endsWith('.json'),
 		load: (url: string)=> new Promise(async (re, rj)=> {
@@ -114,7 +140,7 @@ export class SysBase implements ISysRoots, ISysBase {
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'htm-loader',
-			//priority: 99,
+			//priority: LoaderParserPriority.High,
 		},
 		test: (url: string)=> /\.html?$/.test(url),
 		load: (url: string)=> new Promise(async (re, rj)=> {
@@ -130,7 +156,7 @@ export class SysBase implements ISysRoots, ISysBase {
 		extension: {
 			type: ExtensionType.LoadParser,
 			name: 'sn-loader',
-			//priority: 99,
+			//priority: LoaderParserPriority.High,
 		},
 		test: (url: string)=> url.endsWith('.sn'),
 		load: (url: string)=> new Promise(async (re, rj)=> {
@@ -535,16 +561,14 @@ top: ${(CmnLib.stageH -size) /2 *this.#cvsScale +size *(td.dy ?? 0)}px;`;
 	#plgDecAB: (ab: ArrayBuffer)=> Promise<PLUGIN_DECAB_RET> = ()=> Promise.resolve({ext_num: 0, ab: new ArrayBuffer(0)});
 
 	dec = (_ext: string, tx: string)=> Promise.resolve(tx);
-	async decAB(iab: ArrayBuffer) {
+	async decAB(iab: ArrayBuffer): Promise<HTMLImageElement | HTMLVideoElement | ArrayBuffer> {
 		const {ext_num, ab} = await this.#plgDecAB(iab);
 		const fm = this.#hN2Ext[ext_num];
 		return fm?.fnc ?await fm.fnc(ab) :ab;
 	}
 	readonly #hN2Ext: {[id: number]: {
 		ext	: string;
-		fnc	: {(ab: ArrayBuffer): Promise<HTMLImageElement>}
-			| {(ab: ArrayBuffer): Promise<HTMLVideoElement>}
-			| {(ab: ArrayBuffer): Promise<ArrayBuffer>};	// サウンドファイル用
+		fnc	: {(ab: ArrayBuffer): Promise<HTMLImageElement | HTMLVideoElement | ArrayBuffer>};	// サウンドファイル用
 	}} = {
 		1	: {ext: 'jpeg', fnc: ab=> this.#genImage(ab, 'image/jpeg')},
 		2	: {ext: 'png', fnc: ab=> this.#genImage(ab, 'image/png')},
