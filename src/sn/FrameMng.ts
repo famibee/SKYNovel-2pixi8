@@ -21,11 +21,9 @@ import {Application, Assets, Renderer, Texture} from 'pixi.js';
 export class FrameMng implements IGetFrm {
 	static	#cfg	: Config;
 	static	#sys	: SysBase;
-	// static	#main	: IMain;
 	static	init(cfg: Config, sys: SysBase, _main: IMain): void {
 		FrameMng.#cfg = cfg;
 		FrameMng.#sys = sys;
-		// FrameMng.#main = main;
 	}
 
 	constructor(hTag: IHTag, private readonly appPixi: Application, private readonly val: IVariable) {

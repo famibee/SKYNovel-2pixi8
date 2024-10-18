@@ -16,7 +16,12 @@ export class Layer {
 	protected	name_	= '';
 	set name(nm) {this.name_ = nm}
 	get name() {return this.name_}
-	readonly	ctn	= new Container;
+	readonly	ctn	= new Container({
+		// this will make moving this container GPU powered
+		isRenderGroup: true,
+			// https://pixijs.com/8.x/examples/basic/render-group
+	});
+//	readonly	ctn	= new Container;
 
 	// tsy用
 	get	alpha() {return this.ctn.alpha}

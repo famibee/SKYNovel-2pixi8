@@ -22,7 +22,6 @@ import {SysBase} from './SysBase';
 import {FrameMng} from './FrameMng';
 import {Button} from './Button';
 import {SoundMng} from './SoundMng';
-import {AnalyzeTagArg} from './AnalyzeTagArg';
 import {DesignCast} from './DesignCast';
 import {EventListenerCtn} from './EventListenerCtn';
 import {disableEvent, enableEvent} from './ReadState';
@@ -183,6 +182,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 		this.#stage = appPixi.stage;
 		this.#stage.addChild(this.#back);
 		this.#stage.addChild(this.#fore);
+		this.#stage.addChild(this.#spTransBack);
 		this.#stage.addChild(this.#spTransFore);
 		this.#stage.label = 'stage';	// 4tst
 /*
@@ -393,7 +393,10 @@ export class LayerMng implements IGetFrm, IRecorder {
 
 			const renTx = RenderTexture.create({width: rnd.width, height: rnd.height});	// はみ出し対策
 			rnd.render({container: this.#stage, target: renTx});
-			await this.sys.savePic(url, await rnd.extract.base64(renTx));
+			await this.sys.savePic(
+				url,
+				await rnd.extract.base64(renTx),
+			);
 			renTx.destroy();
 
 			for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
@@ -542,6 +545,16 @@ export class LayerMng implements IGetFrm, IRecorder {
 	//===================================================
 	//MARK: WebGL 頂点シェーダー GLSL
 	// It's easier to see with VSCode extension 'GLSL with Imports'
+/*
+	vec2 p = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+	p.x = p.x * (2.0 / uOutputTexture.x) - 1.0;
+	p.y = p.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+
+	return vec4(p, 0.0, 1.0);
+*/
+/*
+	return vec4((projectionMatrix * vec3(p, 1.0)).xy, 0.0, 1.0);
+*/
 	// #version は入れない
 	static	readonly	#glslRuleTransVert = /* glsl */`
 precision mediump float;
@@ -555,8 +568,7 @@ uniform vec4 uOutputTexture;
 out vec2 vTextureCoord;
 
 vec4 filterVertexPosition() {
-	vec2 p = aPosition * uOutputFrame.zw + uOutputFrame.xy;
-
+	vec2 p = aPosition * max(uOutputFrame.zw, vec2(0.)) + uOutputFrame.xy;
 	p.x = p.x * (2.0 / uOutputTexture.x) - 1.0;
 	p.y = p.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
 
@@ -580,33 +592,35 @@ precision mediump float;
 in vec2 vTextureCoord;
 uniform sampler2D uTexture;
 
-uniform sampler2D uTxRule;
+uniform sampler2D rule;
 uniform float vague;
 uniform float tick;
 
 uniform vec4 inputPixel;
 uniform highp vec4 outputFrame;
+vec2 getUV(vec2 coord) {
+	return coord * inputPixel.xy / outputFrame.zw;
+}
 
 void main() {
 	vec4 fg = texture(uTexture, vTextureCoord);
-	vec4 ru = texture(uTxRule,  vTextureCoord);
+	vec4 ru = texture(rule, vTextureCoord);
 
 	float v = ru.r - tick;
-
-	gl_FragColor = vague <=	abs(v)
-		? 0.0 <= v ? fg : vec4(0)
-		: vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5);
+	gl_FragColor = abs(v) < vague
+		? vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5)
+		: 0.0 <= v ? fg : vec4(0);
 }`;
 /*
 	末尾が読みづらいが、以下のif文を消して三項演算子にしている。
 
 	if (abs(v) < vague) {
-		float a = fg.a *(0.5 +v /vague *0.5);
-		gl_FragColor = vec4(fg.rgb *a, a);
+		float f_a = fg.a *(0.5 +v /vague *0.5);
+		gl_FragColor.rgb = fg.rgb *f_a;
+		gl_FragColor.a = f_a;
 		return;
 	}
 	gl_FragColor = v >= 0.0 ? fg : vec4(0);
-
 
 		★GLSL : don't use "if"｜Nobu https://note.com/nobuhirosaijo/n/n606a3f5d8e89
 			> if文はあまり使わない方がいいらしい (処理負荷が高い)
@@ -659,8 +673,8 @@ struct TimeUniforms {
 	tick	: f32,
 }
 
-@group(2) @binding(1) var uTxRule	: texture_2d<f32>;
-@group(2) @binding(2) var uSmRule	: sampler;
+@group(2) @binding(1) var rule	: texture_2d<f32>;
+@group(2) @binding(2) var smRule	: sampler;
 @group(2) @binding(3) var<uniform> timeUniforms	: TimeUniforms;
 
 struct FragmentInput {
@@ -669,9 +683,9 @@ struct FragmentInput {
 
 @fragment
 fn mainFrag(inp: FragmentInput) -> @location(0) vec4<f32> {
-	return textureSample(uTxRule, uSmRule, inp.vTextureCoord);
+	return textureSample(rule, smRule, inp.vTextureCoord);
 
-//	return textureSample(uTxRule, uSmRule, vTextureCoord + sin( (timeUniforms.tick + (vTextureCoord.x) * 14.) ) * 0.1);
+//	return textureSample(rule, smRule, vTextureCoord + sin( (timeUniforms.tick + (vTextureCoord.x) * 14.) ) * 0.1);
 }`;
 
 
@@ -708,19 +722,24 @@ struct TimeUniforms {
 	tick	: f32,
 }
 
-@group(2) @binding(1) var uTxRule	: texture_2d<f32>;
-@group(2) @binding(2) var uSmRule	: sampler;
+@group(2) @binding(1) var rule	: texture_2d<f32>;
+@group(2) @binding(2) var smRule	: sampler;
 @group(2) @binding(3) var<uniform> timeUniforms	: TimeUniforms;
 
 @fragment
 fn mainFrag(
 	@location(0) vUV: vec2<f32>,
 ) -> @location(0) vec4<f32> {
-	return textureSample(uTxRule, uSmRule, vUV + sin( (timeUniforms.tick + (vUV.x) * 14.) ) * 0.1);
+	return textureSample(rule, smRule, vUV + sin( (timeUniforms.tick + (vUV.x) * 14.) ) * 0.1);
 */
 	//===================================================
 
 
+	#rtTransBack = RenderTexture.create({
+		width	: CmnLib.stageW,
+		height	: CmnLib.stageH,
+	});
+	#spTransBack = new Sprite(this.#rtTransBack);
 
 	#rtTransFore = RenderTexture.create({
 		width	: CmnLib.stageW,
@@ -759,56 +778,79 @@ fn mainFrag(
 
 			this.#fore.visible = true;
 			this.#back.visible = false;	// 再び非表示の裏方に（直前までforeだった）
+			this.#spTransBack.visible = false;
 			this.#spTransFore.visible = false;
 		};
 //		hArg[':id'] = pg.fore.name.slice(0, -7);
 //		this.scrItr.getDesignInfo(hArg);	// 必ず[':id'] を設定すること
 		this.#spTransFore.filters = [];
+		this.#spTransFore.alpha = 1;
 
 		// 一瞬切り替え
 		const time = argChk_Num(hArg, 'time', 0);
 		if (time === 0 || this.#evtMng.isSkipping) {comp(); return false}
 
 
-		const render = ()=> this.appPixi.renderer.render({container: this.#fore, target: this.#rtTransFore});
+		let aBackTransAfter = [];
+		const aBack: Layer[] = [];
+		for (const ln of this.#getLayers()) {
+			const lay = this.#hPages[ln][sDoTrans.has(ln) ?'back' :'fore'];
+			aBackTransAfter.push(lay.ctn);
+			aBack.push(lay);
+		}
+		const {ticker, renderer} = this.appPixi;
+		//x renderer.render({container: this.#back, target: this.#rtTransBack});	// clear: true
 
-		const needUpd = aLayFore.some(lay=> lay.containMovement);
-		let fncRender_base = ()=> {
-			if (needUpd) {
-				fncRender_base = ()=> render();
-			}
-			else {	// 動きがないなら最初に一度だけ
-				fncRender_base = ()=> {};
-				this.appPixi.ticker.remove(fncRender);
-			}
+		let fncRenderBack = ()=> {
+			aBackTransAfter.forEach(ctn=> renderer.render({
+				container	: ctn,
+				target		: this.#rtTransBack,
+				clear		: false,
+			}));
+		};
+		if (! aBack.some(lay=> lay.containMovement)) {
+			const oldFnc = fncRenderBack;	// 動きがないなら最初に一度
+			fncRenderBack = ()=> {fncRenderBack = ()=> {}; oldFnc()};
+		}
 
+		const render = ()=> renderer.render({container: this.#fore, target: this.#rtTransFore});	// clear: true
+		let fncRenderFore = ()=> {
+			this.#fore.visible = true;
 			render();
-			this.#fore.visible = false;	// visible はここで。でないとちらつく
-			this.#back.visible = true;	// [trans]中だけ一時的に見せる
+			this.#fore.visible = false;
+		};
+		if (! aLayFore.some(lay=> lay.containMovement)) {
+			const oldFnc = fncRenderFore;	// 動きがないなら最初に一度
+			fncRenderFore = ()=> {fncRenderFore = ()=> {}; oldFnc()};
+		}
+		const fncRender = ()=> {
+			fncRenderBack();
+			this.#spTransBack.visible = true;
+
+			fncRenderFore();
 			this.#spTransFore.visible = true;
 		};
-		const fncRender = ()=> fncRender_base();
-		const comp2 = ()=> {this.appPixi.ticker.remove(fncRender); comp()};
 
 
 		// クロスフェード
 		const {rule} = hArg;
-		this.#spTransFore.alpha = 1;
+		const comp2 = ()=> {ticker.remove(fncRender); comp()};
 		if (! rule) {
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
-			this.appPixi.ticker.add(fncRender);
+			ticker.add(fncRender);
 			return false;
 		}
 
 		// ルール画像（デフォルト値を vert, frag, wgsl 属性で上書き可能）
-		const sm = new SpritesMng(rule, undefined, sp=> {
+		this.#sps.destroy();
+		this.#sps = new SpritesMng(rule, undefined, sp=> {
 			const {
-				vert = LayerMng.#glslRuleTransVert,
-				frag = LayerMng.#glslRuleTransFrag,
-				wgsl = LayerMng.#wgslRuleTrans,
+				vert	= LayerMng.#glslRuleTransVert,
+				frag	= LayerMng.#glslRuleTransFrag,
+				wgsl	= LayerMng.#wgslRuleTrans,
 			} = hArg;
 			const vague	= argChk_Num(hArg, 'vague', 0.04);
-			const flt = new Filter({
+			const flt	= new Filter({
 				glProgram	: GlProgram.from({
 					vertex	: vert,
 					fragment: frag,
@@ -818,8 +860,8 @@ fn mainFrag(
 					fragment: {entryPoint: 'mainFrag', source: wgsl},
 				}),
 				resources	: {
-					uTxRule	: sp.texture.source,
-					uSmRule	: sp.texture.source.style,
+					rule	: sp.texture.source,
+					smRule	: sp.texture.source.style,
 					timeUniforms: {
 						vague	: {type: 'f32', value: vague},
 						tick	: {type: 'f32', value: 0},
@@ -827,15 +869,14 @@ fn mainFrag(
 				},
 			});
 			this.#spTransFore.filters = [flt];
+			sp.destroy();
 
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
-			this.appPixi.ticker.add(fncRender);
-
-			sp.destroy();
-			sm.destroy();
+			ticker.add(fncRender);
 		});
 		return false;
 	}
+	#sps	= new SpritesMng;
 
 	#getLayers(layer = ''): string[] {return layer ?layer.split(',') :this.#aLayName}
 	#foreachLayers(hArg: HArg, fnc: (ln: string, $pg: Pages)=> void): ReadonlyArray<string> {
@@ -903,7 +944,7 @@ fn mainFrag(
 		this.#spTransFore.filters = [];
 
 		CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {x: 0, y: 0}, ()=> {fncH(); fncV()}, ()=> {
-			this.appPixi.ticker?.remove(fncRender);
+			this.appPixi.ticker.remove(fncRender);
 				// transなしでもadd()してなくても走るが、構わないっぽい。
 			this.#fore.visible = true;
 			this.#spTransFore.visible = false;
