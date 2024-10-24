@@ -165,6 +165,8 @@ export class SndBuf {
 				if (! s2) return;
 
 				this.#sb.addSnd(s2);
+				if (pan !== 0) s2.filters = [new filters.StereoFilter(pan)];
+			//	if (! o.loop) sound.add(fn, snd);	// 手動キャッシュすると単発連打で無音に
 				hArg.fnc?.();
 			},
 		};
@@ -244,6 +246,7 @@ export class SndBuf {
 					url		: snd.options.url,
 					source	: ab,
 				}));
+				if (pan !== 0) snd.filters = [new filters.StereoFilter(pan)];
 			}
 			return false;
 		}
@@ -251,7 +254,7 @@ export class SndBuf {
 		const join = argChk_Boolean(hArg, 'join', true);
 		if (join) {
 			disableEvent();
-			const old: LoadedCallback = o.loaded!;
+			const old = o.loaded!;
 			o.loaded = (e, s2)=> {
 				if (! this.#sb.stt.isDestroy) old(e, s2);
 				enableEvent();

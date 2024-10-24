@@ -783,8 +783,9 @@ export class TxtLayer extends Layer {
 		this.#cntBtn.addChild(btn);
 	});
 	canFocus(): boolean {
-		return (this.ctn.interactiveChildren ?? false) && this.ctn.visible
-			&& TxtLayer.#isPageFore(this);
+		return (this.ctn.interactiveChildren ?? false)
+		&& this.ctn.visible
+		&& TxtLayer.#isPageFore(this);
 	}
 
 

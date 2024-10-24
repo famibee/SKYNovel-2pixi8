@@ -159,7 +159,7 @@ export class SpritesMng {
 
 				// 動画のみ色々処理
 				if (! sp.texture || ! (sp.texture.source instanceof VideoSource)) return
-				const hve = sp.texture.source.resource as HTMLVideoElement;
+				const hve = sp.texture.source.resource;
 				hve.volume = SpritesMng.#glbVol;
 
 				// 【PixiJS】iOSとChromeでAutoPlay可能なビデオSpriteの設定 - Qiita https://qiita.com/masato_makino/items/8316e7743acac514e361

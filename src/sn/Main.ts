@@ -147,7 +147,7 @@ export class Main implements IMain {
 
 		this.#val.setVal_Nochk('tmp', 'sn.eventArg', hArg.arg ?? '');
 		this.#val.setVal_Nochk('tmp', 'sn.eventLabel', hArg.label ?? '');
-//console.log(`%cfn:Main.ts line:159 - resumeByJumpOrCall:%o`, 'color:#3B0;', hArg);
+//console.log(`%cfn:Main.ts resumeByJumpOrCall:%o`, 'color:#3B0;', hArg);
 		if (argChk_Boolean(hArg, 'call', false)) {
 			this.#scrItr.subIdxToken();	// 「コール元の次」に進めず、「コール元」に戻す
 			this.#hTag.call(hArg);
@@ -184,7 +184,6 @@ export class Main implements IMain {
 	#main() {
 		while (this.#isLoop) {
 			let token = this.#scrItr.nextToken();
-//console.log(`fn:Main.ts main (fn:${this.#scrItr.scriptFn} ln:${this.#scrItr.lineNum}) token=${token}=`);
 			if (! token) return;	// 初期化前に終了した場合向け
 
 			const uc = token.charCodeAt(0);	// TokenTopUnicode
@@ -194,7 +193,6 @@ export class Main implements IMain {
 			if (uc === 10) {this.#scrItr.addLineNum(token.length); continue}
 			// [ タグ開始
 			if (uc === 91) {
-//console.log(`(fn:${this.#scrItr.scriptFn} ln:${this.#scrItr.lineNum}) %c${token.slice(0, 64)}`, 'background-color:#30B;');
 				if (this.#scrItr.isBreak(token)) return;
 				try {
 					const cl = (token.match(/\n/g) ?? []).length;
@@ -217,7 +215,7 @@ export class Main implements IMain {
 						const o = splitAmpersand(token.slice(1));
 						o.name = this.#prpPrs.getValAmpersand(o.name);
 						o.text = String(this.#prpPrs.parse(o.text));
-						this.#hTag.let(o as HArg);
+						this.#hTag.let(o);
 						continue;
 					}
 
@@ -228,7 +226,7 @@ export class Main implements IMain {
 					this.errScript(
 						err instanceof Error
 							? `& 変数操作・表示 mes=${err.message}(${err.name})`
-							: err as string,
+							: err,
 						false
 					);
 					return;
@@ -249,7 +247,7 @@ export class Main implements IMain {
 				this.errScript(
 					err instanceof Error
 						? `文字表示 mes=${err.message}(${err.name})`
-						: err as string,
+						: err,
 					false
 				);
 				return;

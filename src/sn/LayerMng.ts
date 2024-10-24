@@ -26,7 +26,7 @@ import {DesignCast} from './DesignCast';
 import {EventListenerCtn} from './EventListenerCtn';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Application, Color, Container, Filter, GlProgram, GpuProgram, Graphics, RenderTexture, Sprite, autoDetectRenderer} from 'pixi.js';
+import {Application, Color, Container, Filter, GlProgram, GpuProgram, Graphics, RenderTexture, Sprite, Texture, autoDetectRenderer} from 'pixi.js';
 
 export interface IMakeDesignCast { (idc	: DesignCast): void; };
 
@@ -545,16 +545,6 @@ export class LayerMng implements IGetFrm, IRecorder {
 	//===================================================
 	//MARK: WebGL 頂点シェーダー GLSL
 	// It's easier to see with VSCode extension 'GLSL with Imports'
-/*
-	vec2 p = aPosition * uOutputFrame.zw + uOutputFrame.xy;
-	p.x = p.x * (2.0 / uOutputTexture.x) - 1.0;
-	p.y = p.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
-
-	return vec4(p, 0.0, 1.0);
-*/
-/*
-	return vec4((projectionMatrix * vec3(p, 1.0)).xy, 0.0, 1.0);
-*/
 	// #version は入れない
 	static	readonly	#glslRuleTransVert = /* glsl */`
 precision mediump float;
@@ -568,7 +558,7 @@ uniform vec4 uOutputTexture;
 out vec2 vTextureCoord;
 
 vec4 filterVertexPosition() {
-	vec2 p = aPosition * max(uOutputFrame.zw, vec2(0.)) + uOutputFrame.xy;
+	vec2 p = aPosition * uOutputFrame.zw + uOutputFrame.xy;
 	p.x = p.x * (2.0 / uOutputTexture.x) - 1.0;
 	p.y = p.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
 
@@ -596,18 +586,20 @@ uniform sampler2D rule;
 uniform float vague;
 uniform float tick;
 
-uniform vec4 inputPixel;
-uniform highp vec4 outputFrame;
+out vec4 finalColor;
+
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
 vec2 getUV(vec2 coord) {
-	return coord * inputPixel.xy / outputFrame.zw;
+	return coord * uInputSize.xy / uOutputFrame.zw;
 }
 
 void main() {
 	vec4 fg = texture(uTexture, vTextureCoord);
-	vec4 ru = texture(rule, vTextureCoord);
+	vec4 ru = texture(rule, getUV(vTextureCoord));
 
 	float v = ru.r - tick;
-	gl_FragColor = abs(v) < vague
+	finalColor = abs(v) < vague
 		? vec4(fg.rgb, 1) *fg.a *(0.5 +v /vague *0.5)
 		: 0.0 <= v ? fg : vec4(0);
 }`;
@@ -645,6 +637,28 @@ struct LocalUniforms {
 @group(0) @binding(0) var<uniform> globalUniforms	: GlobalUniforms;
 @group(1) @binding(0) var<uniform> localUniforms	: LocalUniforms;
 
+struct VertexOutput {
+	@builtin(position) aPosition: vec4<f32>,
+};
+
+
+@vertex
+fn mainVert(
+	@location(0) aPosition: vec2<f32>
+) -> @builtin(position) vec4<f32> {
+	return vec4f(aPosition, 0, 1);
+}
+
+
+@fragment
+fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
+	return vec4<f32>(1.0, 0.0, 1.0, 0.0);
+}`;
+	// "The Book of Shaders" を WGSL で学んでいく https://zenn.dev/etoal83/scraps/e65b902568ecb3
+	// Instanced Geometry | PixiJS https://pixijs.com/8.x/examples/mesh-and-shaders/instanced-geometry
+
+
+/*
 struct VertexOutput {
 	@builtin(position)	position: vec4<f32>,
 	@location(0)		texCoord: vec2<f32>,
@@ -686,8 +700,8 @@ fn mainFrag(inp: FragmentInput) -> @location(0) vec4<f32> {
 	return textureSample(rule, smRule, inp.vTextureCoord);
 
 //	return textureSample(rule, smRule, vTextureCoord + sin( (timeUniforms.tick + (vTextureCoord.x) * 14.) ) * 0.1);
-}`;
-
+}
+*/
 
 /*
 struct GlobalUniforms {
@@ -795,18 +809,18 @@ fn mainFrag(
 		const aBack: Layer[] = [];
 		for (const ln of this.#getLayers()) {
 			const lay = this.#hPages[ln][sDoTrans.has(ln) ?'back' :'fore'];
-			aBackTransAfter.push(lay.ctn);
+			if (lay.ctn.visible) aBackTransAfter.push(lay.ctn);
 			aBack.push(lay);
 		}
 		const {ticker, renderer} = this.appPixi;
-		//x renderer.render({container: this.#back, target: this.#rtTransBack});	// clear: true
+		renderer.render({container: this.#back, target: this.#rtTransBack});	// clear: true
 
 		let fncRenderBack = ()=> {
-			aBackTransAfter.forEach(ctn=> renderer.render({
+			for (const ctn of aBackTransAfter) renderer.render({
 				container	: ctn,
 				target		: this.#rtTransBack,
 				clear		: false,
-			}));
+			})
 		};
 		if (! aBack.some(lay=> lay.containMovement)) {
 			const oldFnc = fncRenderBack;	// 動きがないなら最初に一度
@@ -814,6 +828,7 @@ fn mainFrag(
 		}
 
 		const render = ()=> renderer.render({container: this.#fore, target: this.#rtTransFore});	// clear: true
+		render();
 		let fncRenderFore = ()=> {
 			this.#fore.visible = true;
 			render();
@@ -842,14 +857,27 @@ fn mainFrag(
 		}
 
 		// ルール画像（デフォルト値を vert, frag, wgsl 属性で上書き可能）
-		this.#sps.destroy();
-		this.#sps = new SpritesMng(rule, undefined, sp=> {
+		const vague	= argChk_Num(hArg, 'vague', 0.04);
+		const uniforms = {
+			rule	: Texture.EMPTY,
+			smRule	: Texture.EMPTY.source.style,
+			timeUniforms: {
+				vague	: {type: 'f32', value: vague},
+				tick	: {type: 'f32', value: 0},
+			},
+		};
+		const tw = CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, uniforms, {tick: 1}, ()=> {}, comp2, ()=> {}, false);
+		const sm = new SpritesMng(rule, undefined, sp=> {
+			uniforms.rule = sp.texture;
+			uniforms.smRule = sp.texture.source.style;
+			sp.destroy();
+			sm.destroy();
+
 			const {
 				vert	= LayerMng.#glslRuleTransVert,
 				frag	= LayerMng.#glslRuleTransFrag,
 				wgsl	= LayerMng.#wgslRuleTrans,
 			} = hArg;
-			const vague	= argChk_Num(hArg, 'vague', 0.04);
 			const flt	= new Filter({
 				glProgram	: GlProgram.from({
 					vertex	: vert,
@@ -859,24 +887,15 @@ fn mainFrag(
 					vertex	: {entryPoint: 'mainVert', source: wgsl},
 					fragment: {entryPoint: 'mainFrag', source: wgsl},
 				}),
-				resources	: {
-					rule	: sp.texture.source,
-					smRule	: sp.texture.source.style,
-					timeUniforms: {
-						vague	: {type: 'f32', value: vague},
-						tick	: {type: 'f32', value: 0},
-					},
-				},
+				resources	: uniforms,
 			});
 			this.#spTransFore.filters = [flt];
-			sp.destroy();
 
-			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, flt.resources.timeUniforms.uniforms, {tick: 1}, ()=> {}, comp2, ()=> {});
+			tw.start();
 			ticker.add(fncRender);
 		});
 		return false;
 	}
-	#sps	= new SpritesMng;
 
 	#getLayers(layer = ''): string[] {return layer ?layer.split(',') :this.#aLayName}
 	#foreachLayers(hArg: HArg, fnc: (ln: string, $pg: Pages)=> void): ReadonlyArray<string> {

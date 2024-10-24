@@ -971,7 +971,7 @@ export class ScriptIterator {
 		}
 		catch (e) {
 			if (e instanceof Error) mes += `例外 mes=${e.message}(${e.name})`;
-			else mes = e as string;
+			else mes = e;
 			this.main.errScript(mes, false);
 		}
 		this.val.touchAreaKidoku(this.#scriptFn);
@@ -1158,7 +1158,6 @@ export class ScriptIterator {
 		const mark = this.val.getMark(place);
 		if (! mark) throw `place【${place}】は存在しません`;
 
-		enableEvent();
 		return this.loadFromMark(hArg, mark, SndProcOnLoad.ALL_STOP_AND_PLAY);
 	}
 	loadFromMark(hArg: HArg, mark: IMark, snd: SndProcOnLoad = SndProcOnLoad.MINIMAL_STOP) {
@@ -1188,32 +1187,28 @@ export class ScriptIterator {
 		this.#aCallStk = [];
 		CmnTween.stopAllTw();
 
-		ap = [ap, this.#layMng.playback(this.#mark.hPages)].flat();
-		const prLastGrp: Promise<void> = ap.pop() ?? Promise.resolve();
-		const fncFin = ()=> Promise.all([prLastGrp])
+		const p = Promise.allSettled([...ap, ...this.#layMng.playback(this.#mark.hPages)])
 		.then(()=> this.#layMng.cover(false))
-		.catch(e=> console.error(`fn:ScriptIterator.ts fncFin e:%o`, e));
-
-		const {index, fn, label} = hArg;
-		const p = Promise.allSettled(ap)
 		.catch(e=> console.error(`fn:ScriptIterator.ts loadFromMark e:%o`, e));
+		const {index, fn} = hArg;
 		if (index) {	// ページ移動用
 //console.log(`fn:ScriptIterator.ts \x1b[42mmove!\x1b[49m fn:${fn} idx:${index}`);
-			p.then(()=> {fncFin(); this.#jumpWork(fn, '', index)});
+			p.then(()=> this.#jumpWork(fn, '', index));
 			return true;
 		}
 
 		this.#layMng.cover(true);	// ページ移動では全画面黒で覆わない
+		disableEvent();
 		const fn2 = String(this.val.getVal('save:const.sn.scriptFn'));
 		const idx = Number(this.val.getVal('save:const.sn.scriptIdx'));
 		delete this.#hScript[fn2];	// 必ずスクリプトを再読込。吉里吉里に動作を合わせる
-		p.then(label ? ()=> {
-			fncFin();
+		const {label} = hArg;
+		if (label) p.then(()=> {
 			this.#scriptFn = fn2;
 			this.#idxToken = idx;
 			this.hTag.call({fn, label});
-		}
-		: ()=> {fncFin(); this.#jumpWork(fn2, '', idx)});
+		});
+		else p.then(()=> this.#jumpWork(fn2, '', idx));
 
 		return true;
 	}
@@ -1234,7 +1229,6 @@ export class ScriptIterator {
 		this.#hScript = h;
 
 		hArg.do_rec = false;
-		enableEvent();
 		return this.loadFromMark(hArg, mark, SndProcOnLoad.NO_TOUCH);
 	}
 
