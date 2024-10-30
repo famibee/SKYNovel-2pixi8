@@ -55,7 +55,8 @@ export class FrameMng implements IGetFrm {
 	#hIfrmVisibleBk: {[id: string]: boolean} = Object.create(null);
 	restoreAllFrame() {	// 保存していた表示・非表示を回復
 		for (const [id, v] of Object.entries(this.#hIfrmVisibleBk)) {
-			this.#hIfrm[id].style.display = v ?'inline' :'none';
+			const f = this.#hIfrm[id];
+			if (f) f.style.display = v ?'inline' :'none';
 		}
 		this.#hIfrmVisibleBk = Object.create(null);
 	}
@@ -135,7 +136,7 @@ export class FrameMng implements IGetFrm {
 		return true;
 	}
 	#hDisabled	: {[id: string]: boolean}	= {};
-	getFrmDisabled(id: string): boolean {return this.#hDisabled[id]}
+	getFrmDisabled(id: string): boolean {return this.#hDisabled[id] as boolean}
 	#rect(hArg: HArg): DOMRect {
 		const a = {...hArg};
 		const re = FrameMng.#sys.resolution;
@@ -159,12 +160,12 @@ export class FrameMng implements IGetFrm {
 		if (aImg) {aImg.push(img); return}	// load 終了前の駆け込み対応
 		this.#hARetImg[src] = [img];
 
-		const [srcNoPrm, Prm=''] = src.split('?');
+		const [srcNoPrm='', Prm=''] = src.split('?');
 		const path = FrameMng.#cfg.searchPath(srcNoPrm, SEARCH_PATH_ARG_EXT.SP_GSM);
 		Assets.load({alias: src, src: path}).then(async (tx: Texture)=> {
 			const b64 = await this.rnd.extract.base64(tx);
 			const urlImg = this.#hEncImgOUrl[src] = b64 + (Prm === ''|| b64.startsWith('blob:') || b64.startsWith('data:') ?'' :'?'+ Prm);
-			for (const img2 of this.#hARetImg[src]) {
+			for (const img2 of this.#hARetImg[src]!) {
 				img2.src = urlImg;
 				if (onload) img2.onload = ()=> onload(img2);
 			}

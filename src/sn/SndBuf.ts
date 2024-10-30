@@ -14,7 +14,7 @@ import {CmnTween} from './CmnTween';
 import {disableEvent, enableEvent} from './ReadState';
 
 import {Assets} from 'pixi.js';
-import {sound, Sound, Options, filters, LoadedCallback} from '@pixi/sound';
+import {sound, Sound, Options, filters} from '@pixi/sound';
 import {Tween, remove} from '@tweenjs/tween.js'
 
 class SndInf {

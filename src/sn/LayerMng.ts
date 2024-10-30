@@ -54,10 +54,10 @@ export class LayerMng implements IGetFrm, IRecorder {
 			sys.cvsResize();
 			this.cvsResizeDesign();
 			if (this.#modeLnSub) for (const ln of this.#aLayName) {
-				this.#hPages[ln].fore.cvsResizeChildren();
+				this.#hPages[ln]!.fore.cvsResizeChildren();
 			}
 			else for (const ln of this.#aLayName) {
-				this.#hPages[ln].fore.cvsResize();
+				this.#hPages[ln]!.fore.cvsResize();
 			}
 
 			this.#frmMng.cvsResize();
@@ -75,7 +75,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 		}
 		sys.cvsResize();
 
-		TxtLayer.init(cfg, hTag, val, this, me=> this.#hPages[me.layname].fore === me, appPixi);
+		TxtLayer.init(cfg, hTag, val, this, me=> this.#hPages[me.layname]!.fore === me, appPixi);
 		GrpLayer.init(main, cfg, appPixi, sys, sndMng, val);
 		FrameMng.init(cfg, sys, main);
 		Button.init(cfg);
@@ -102,7 +102,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 
 		hTag.quake			= o=> this.#quake(o);		// 画面を揺らす
 		hTag.stop_quake		= hTag.finish_trans;		// 画面揺らし中断
-		hTag.wq				= o=> hTag.wt(o);			// 画面揺らし終了待ち
+		hTag.wq				= o=> hTag.wt!(o);			// 画面揺らし終了待ち
 
 		hTag.pause_tsy		= o=> CmnTween.pause_tsy(o);	// 一時停止
 		hTag.resume_tsy		= o=> CmnTween.resume_tsy(o);	// 一時停止再開
@@ -231,7 +231,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 		_enterDesign: _=> {
 			DesignCast.enterMode();
 			for (const ln of this.#aLayName) {
-				const lay = this.#hPages[ln].fore;
+				const lay = this.#hPages[ln]!.fore;
 				lay.makeDesignCastChildren(gdc=> gdc.make());
 				lay.makeDesignCast(gdc=> gdc.make());
 			}
@@ -247,7 +247,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 	#modeLn		= '';
 	#modeLnSub	= '';
 	#selectNode(node: string) {
-		[this.#modeLn, this.#modeLnSub = ''] = node.split('/');
+		[this.#modeLn='', this.#modeLnSub=''] = node.split('/');
 		const pages = this.#hPages[this.#modeLn];
 		if (! pages) return;
 
@@ -300,7 +300,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 	// 既存の全文字レイヤの実際のバック不透明度、を再計算
 	#foreachRedrawTxtLayBack(g_alpha: number) {
 		for (const ln of this.#getLayers()) {
-			const pg = this.#hPages[ln];
+			const pg = this.#hPages[ln]!;
 			if (! (pg.fore instanceof TxtLayer)) continue;
 			pg.fore.chgBackAlpha(g_alpha);
 			(pg.back as TxtLayer).chgBackAlpha(g_alpha);
@@ -323,7 +323,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 		if (! this.currentTxtlayFore) return false;
 
 		return this.#getLayers().some(ln=> {
-			const f = this.#hPages[ln].fore;
+			const f = this.#hPages[ln]!.fore;
 			return f instanceof TxtLayer && f.click();
 		});
 	}
@@ -357,15 +357,15 @@ export class LayerMng implements IGetFrm, IRecorder {
 		// 一時的に非表示にしてスナップショット
 		const hBk: {[ln: string]: boolean} = {};
 		for (const ln of this.#getLayers()) {
-			const sp = this.#hPages[ln].fore.ctn;
+			const sp = this.#hPages[ln]!.fore.ctn;
 			hBk[ln] = sp.visible;
 			sp.visible = false;
 		}
-		for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln].fore.ctn.visible = true;
+		for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln]!.fore.ctn.visible = true;
 
 		this.sys.capturePage(url, width, height, ()=> {
 			for (const [ln, v] of Object.entries(hBk)) {
-				this.#hPages[ln].fore.ctn.visible = v;
+				this.#hPages[ln]!.fore.ctn.visible = v;
 			}
 			this.#frmMng.restoreAllFrame();
 			enableEvent();
@@ -387,7 +387,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 			const pg = hArg.page !== 'back' ?'fore' :'back';
 			await Promise.allSettled(
 				this.#getLayers(hArg.layer).map(ln=> new Promise<void>(
-					re=> this.#hPages[ln][pg].snapshot(rnd, re)
+					re=> this.#hPages[ln]![pg].snapshot(rnd, re)
 				))
 			);
 
@@ -399,7 +399,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 			);
 			renTx.destroy();
 
-			for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln][pg].snapshot_end();
+			for (const ln of this.#getLayers(hArg.layer)) this.#hPages[ln]![pg].snapshot_end();
 			rnd.destroy(true);
 
 			enableEvent();
@@ -448,12 +448,12 @@ export class LayerMng implements IGetFrm, IRecorder {
 				this.#chkTxtLay = ()=> {};
 				this.#getTxtLayer = this.#$getTxtLayer;
 				this.#current = this.#$current;
-				this.hTag.current({layer});	// hPages更新後でないと呼べない
+				this.hTag.current!({layer});	// hPages更新後でないと呼べない
 				this.goTxt = ()=> {
 					if (this.#evtMng.isSkipping) LayerMng.#msecChWait = 0;
 					else this.setNormalChWait();
 					for (const ln of this.#getLayers()) {
-						const f = this.#hPages[ln].fore;
+						const f = this.#hPages[ln]!.fore;
 						if (f instanceof TxtLayer) this.#cmdTxt('gotxt｜', f, false);
 					}
 				}
@@ -484,7 +484,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 	#lay(hArg: HArg): boolean {
 		// Trans
 		const ln = this.#argChk_layer(hArg);
-		const pg = this.#hPages[ln];
+		const pg = this.#hPages[ln]!;
 		const back = pg.back.ctn;
 		const fore = pg.fore.ctn;
 		if (argChk_Boolean(hArg, 'float', false)) {
@@ -530,7 +530,7 @@ export class LayerMng implements IGetFrm, IRecorder {
 		this.#foreachLayers(hArg, layer=> {
 			//if (name === this.strTxtlay && hArg.page !== 'back') this.recText('', true);
 				// 改ページ
-			const pg = this.#hPages[this.#argChk_layer({layer})];
+			const pg = this.#hPages[this.#argChk_layer({layer})]!;
 			if (hArg.page === 'both') {	// page=both で両面削除
 				pg.fore.clearLay(hArg);
 				pg.back.clearLay(hArg);
@@ -771,7 +771,7 @@ fn mainFrag(
 		const aLayFore: Layer[] = [];
 		for (const ln of this.#getLayers(layer)) {
 			sDoTrans.add(ln);
-			aLayFore.push(this.#hPages[ln].fore);
+			aLayFore.push(this.#hPages[ln]!.fore);
 		}
 
 		const comp = async ()=> {
@@ -808,7 +808,7 @@ fn mainFrag(
 		let aBackTransAfter = [];
 		const aBack: Layer[] = [];
 		for (const ln of this.#getLayers()) {
-			const lay = this.#hPages[ln][sDoTrans.has(ln) ?'back' :'fore'];
+			const lay = this.#hPages[ln]![sDoTrans.has(ln) ?'back' :'fore'];
 			if (lay.ctn.visible) aBackTransAfter.push(lay.ctn);
 			aBack.push(lay);
 		}
@@ -848,15 +848,15 @@ fn mainFrag(
 
 
 		// クロスフェード
-		const {rule} = hArg;
+		const {rule, vert, frag} = hArg;
 		const comp2 = ()=> {ticker.remove(fncRender); comp()};
-		if (! rule) {
+		if (! vert && ! frag && ! hArg.wgsl && ! rule) {
 			CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, this.#spTransFore, {alpha: 0}, ()=> {}, comp2, ()=> {});
 			ticker.add(fncRender);
 			return false;
 		}
 
-		// ルール画像（デフォルト値を vert, frag, wgsl 属性で上書き可能）
+		// Filter使用系（デフォルト値を vert, frag, wgsl 属性で上書き可能）
 		const vague	= argChk_Num(hArg, 'vague', 0.04);
 		const uniforms = {
 			rule	: Texture.EMPTY,
@@ -866,30 +866,30 @@ fn mainFrag(
 				tick	: {type: 'f32', value: 0},
 			},
 		};
-		const tw = CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, uniforms, {tick: 1}, ()=> {}, comp2, ()=> {}, false);
+		const {wgsl = LayerMng.#wgslRuleTrans} = hArg;
+		this.#spTransFore.filters = [new Filter({
+			glProgram	: GlProgram.from({
+				vertex	: vert ?? LayerMng.#glslRuleTransVert,
+				fragment: frag ?? LayerMng.#glslRuleTransFrag,
+			}),
+			gpuProgram	: GpuProgram.from({
+				vertex	: {entryPoint: 'mainVert', source: wgsl},
+				fragment: {entryPoint: 'mainFrag', source: wgsl},
+			}),
+			resources	: uniforms,
+		})];
+
+		const tw = CmnTween.tween(CmnTween.TW_INT_TRANS, hArg, uniforms, {tick: 1}, ()=> {}, comp2, ()=> {}, ! rule);
+		if (! rule) {
+			ticker.add(fncRender);
+			return false;
+		}
+		// ルール画像あり
 		const sm = new SpritesMng(rule, undefined, sp=> {
 			uniforms.rule = sp.texture;
 			uniforms.smRule = sp.texture.source.style;
 			sp.destroy();
 			sm.destroy();
-
-			const {
-				vert	= LayerMng.#glslRuleTransVert,
-				frag	= LayerMng.#glslRuleTransFrag,
-				wgsl	= LayerMng.#wgslRuleTrans,
-			} = hArg;
-			const flt	= new Filter({
-				glProgram	: GlProgram.from({
-					vertex	: vert,
-					fragment: frag,
-				}),
-				gpuProgram	: GpuProgram.from({
-					vertex	: {entryPoint: 'mainVert', source: wgsl},
-					fragment: {entryPoint: 'mainFrag', source: wgsl},
-				}),
-				resources	: uniforms,
-			});
-			this.#spTransFore.filters = [flt];
 
 			tw.start();
 			ticker.add(fncRender);
@@ -912,8 +912,8 @@ fn mainFrag(
 	#sortLayers(layers = ''): string[] {
 		return this.#getLayers(layers)
 		.sort((a, b)=> {
-			const ai = this.#fore.getChildIndex(this.#hPages[a].fore.ctn);
-			const bi = this.#fore.getChildIndex(this.#hPages[b].fore.ctn);
+			const ai = this.#fore.getChildIndex(this.#hPages[a]!.fore.ctn);
+			const bi = this.#fore.getChildIndex(this.#hPages[b]!.fore.ctn);
 			if (ai < bi) return -1;
 			if (ai > bi) return 1;
 			return 0;
@@ -923,7 +923,7 @@ fn mainFrag(
 	setAllStyle2TxtLay(style: string) {
 		const aLn = this.#getLayers();
 		for (const ln of aLn) {
-			const l = this.#hPages[ln].fore;
+			const l = this.#hPages[ln]!.fore;
 			if (l instanceof TxtLayer) l.lay({style});	// 必要最小限設定なので
 		//	if (l instanceof TxtLayer) l.cssText = style;
 		}
@@ -939,7 +939,7 @@ fn mainFrag(
 		const {layer} = hArg;
 		const aDo: Container[] = [];
 		for (const ln of this.#getLayers(layer)) {
-			aDo.push(this.#hPages[ln].fore.ctn);
+			aDo.push(this.#hPages[ln]!.fore.ctn);
 		}
 		this.#rtTransFore.resize(CmnLib.stageW, CmnLib.stageH);
 			// NOTE: スマホ回転対応が要るかも？
@@ -981,7 +981,7 @@ fn mainFrag(
 		const {layer, render, name} = hArg;
 		if (! layer) throw 'layerは必須です';
 
-		const pg = this.#hPages[this.#argChk_layer(hArg)];
+		const pg = this.#hPages[this.#argChk_layer(hArg)]!;
 		const lay = pg.fore;
 
 		let finishBlendLayer = ()=> {};
@@ -1015,7 +1015,7 @@ fn mainFrag(
 		CmnTween.finish_trans();
 
 		this.#foreachLayers(hArg, name=> {
-			const pg = this.#hPages[this.#argChk_layer({layer: name})];
+			const pg = this.#hPages[this.#argChk_layer({layer: name})]!;
 			if (hArg.page === 'both') {	// page=both で両面に
 				this.#add_filter2(pg.fore, hArg);
 				this.#add_filter2(pg.back, hArg);
@@ -1041,7 +1041,7 @@ fn mainFrag(
 	//MARK: フィルター全削除
 	#clear_filter(hArg: HArg) {
 		this.#foreachLayers(hArg, layer=> {
-			const pg = this.#hPages[this.#argChk_layer({layer})];
+			const pg = this.#hPages[this.#argChk_layer({layer})]!;
 			if (hArg.page === 'both') {	// page=both で両面に
 				const f = pg.fore;
 				const b = pg.back;
@@ -1062,7 +1062,7 @@ fn mainFrag(
 	//MARK: フィルター個別切替
 	#enable_filter(hArg: HArg) {
 		this.#foreachLayers(hArg, layer=> {
-			const pg = this.#hPages[this.#argChk_layer({layer})];
+			const pg = this.#hPages[this.#argChk_layer({layer})]!;
 			if (hArg.page === 'both') {	// page=both で両面に
 				this.#enable_filter2(pg.fore, hArg);
 				this.#enable_filter2(pg.back, hArg);
@@ -1083,9 +1083,8 @@ fn mainFrag(
 		const i = uint(argChk_Num(hArg, 'index', 0));
 		if (len <= i) throw `フィルターの個数（${len}）を越えています`;
 
-		l.aFltHArg[i].enabled =
-		a[i].enabled =
-		argChk_Boolean(hArg, 'enabled', true);
+		l.aFltHArg[i]!.enabled =
+		a[i]!.enabled = argChk_Boolean(hArg, 'enabled', true);
 	}
 
 
@@ -1120,7 +1119,7 @@ fn mainFrag(
 	#getTxtLayer = (_hArg: HArg): TxtLayer=> {this.#chkTxtLay(); throw 0};
 	#$getTxtLayer(hArg: HArg): TxtLayer {
 		const ln = this.#argChk_layer(hArg, this.#curTxtlay);
-		const pg = this.#hPages[ln];
+		const pg = this.#hPages[ln]!;
 		const lay = pg.getPage(hArg);
 		if (! (lay instanceof TxtLayer)) throw ln +'はTxtLayerではありません';
 
@@ -1135,14 +1134,15 @@ fn mainFrag(
 		const {layer} = hArg;
 		if (! layer) throw '[current] layerは必須です';
 
-		this.#pgTxtlay = this.#hPages[layer];
-		if (! (this.#pgTxtlay.getPage(hArg) instanceof TxtLayer)) throw `${layer}はTxtLayerではありません`;
+		const lay = this.#hPages[layer];
+		if (! lay || ! (lay.getPage(hArg) instanceof TxtLayer)) throw `${layer}はTxtLayerではありません`;
+		this.#pgTxtlay = lay;
 
 		this.recPagebreak();	// カレント変更前に現在の履歴を保存
 		this.#curTxtlay = layer;
 		this.val.setVal_Nochk('save', 'const.sn.mesLayer', layer);
 		for (const ln of this.#getLayers()) {
-			const pg = this.#hPages[ln];
+			const pg = this.#hPages[ln]!;
 			if (! (pg.fore instanceof TxtLayer)) continue;
 			pg.fore.isCur =
 			(pg.back as TxtLayer).isCur = ln === layer;
@@ -1297,7 +1297,7 @@ fn mainFrag(
 	#dump_lay(hArg: HArg) {
 		console.group('🥟 [dump_lay]');
 		for (const ln of this.#getLayers(hArg.layer)) {
-			const pg = this.#hPages[ln];
+			const pg = this.#hPages[ln]!;
 			try {
 				console.info(`%c${pg.fore.name.slice(0, -7)} %o`, `color:#${CmnLib.isDarkMode ?'49F' :'05A'};`,
 				JSON.parse(`{"back":{${pg.back.dump()}}, "fore":{${pg.fore.dump()}}}`));
@@ -1341,7 +1341,7 @@ fn mainFrag(
 	record(): any {
 		const o: any = {};
 		for (const ln of this.#aLayName) {
-			const pg = this.#hPages[ln];
+			const pg = this.#hPages[ln]!;
 			o[ln] = {
 				cls: pg.cls,
 				fore: pg.fore.record(),
@@ -1368,7 +1368,7 @@ fn mainFrag(
 		aPrm.push(new Promise(re=> {	// 若い順にsetChildIndex()
 			for (const {ln, idx} of
 				aSort.sort(({idx: a}, {idx: b})=> a === b ?0 :a < b ?-1 :1)) {
-				const {fore, back} = this.#hPages[ln];
+				const {fore, back} = this.#hPages[ln]!;
 				if (! fore) continue;
 
 				const i = len > idx ?idx :len -1;

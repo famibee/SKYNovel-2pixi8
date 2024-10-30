@@ -188,7 +188,10 @@ export class SpritesMng {
 				asp.play();
 				return asp;
 			}
-			if (fn in SpritesMng.#hFn2hve) return Sprite.from(SpritesMng.#hFn2hve[fn]);
+			if (fn in SpritesMng.#hFn2hve) {
+				const hve = SpritesMng.#hFn2hve[fn];
+				if (hve) return Sprite.from(hve);
+			}
 
 			const tx: Texture | undefined = Assets.cache.get(fn);
 			return tx ?Sprite.from(tx) :new Sprite;
@@ -197,11 +200,11 @@ export class SpritesMng {
 	static	getHFn2VElm(fn: string) {return SpritesMng.#hFn2hve[fn]}
 
 		static	#sortAFrameName(aFn: string[]) {
-			const a_base_name = /([^\d]+)\d+\.(\w+)/.exec(aFn[0]);
+			const a_base_name = /([^\d]+)\d+\.(\w+)/.exec(aFn[0] ?? '');
 			if (! a_base_name) return;
 
-			const is = a_base_name[1].length;
-			const ie = -a_base_name[2].length -1;
+			const is = a_base_name[1]!.length;
+			const ie = -a_base_name[2]!.length -1;
 			aFn.sort((a, b)=> int(a.slice(is, ie)) > int(b.slice(is, ie)) ?1 :-1);
 		}
 

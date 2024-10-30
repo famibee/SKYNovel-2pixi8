@@ -17,12 +17,13 @@
 					- Bug: Warning when using Sprite with image file loaded in ArrayBuffer format [Use CanvasSource instead] · Issue #10989 · pixijs/pixijs https://github.com/pixijs/pixijs/issues/10989
 			- 動画
 				- GL_INVALID_OPERATION: The destination level of the destination texture must be defined.
+					- Bug: Loading a video file in ArrayBuffer format and processing it with Sprite causes numerous warnings and processing stops. · Issue #10990 · pixijs/pixijs https://github.com/pixijs/pixijs/issues/10990
 		- タグリファレンス更新
 			- [trans]
 				- デフォルト値を vert, frag, wgsl 属性で上書き可能
 
 		- ギャラリー
-			- ボタンが効かない（通常プロジェクトでは効く）
+			- （直ったかも）ボタンが効かない（通常プロジェクトでは効く）
 				- [button page=fore] + [s] で起こる？
 			- 別のプロジェクト選択でプロジェクト変更しない
 		- ギャラリーで確認
