@@ -13,7 +13,6 @@ import {Main} from './Main';
 import {DebugMng} from './DebugMng';
 
 import {Application, Assets} from 'pixi.js';
-
 import {HINFO, HPROC, SAVE_WIN_INF} from '../preload';
 import {IpcRendererEvent, MessageBoxOptions} from 'electron/renderer';
 const to_app: HPROC = window.to_app;
@@ -24,10 +23,13 @@ export class SysApp extends SysNode {
 	constructor(hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}) {
 		super(hPlg, arg);
 
-		Assets.init({basePath: process.cwd()});
-			// SysNode に置くとテストで【already init()】が出てしまう
+		// queueMicrotask(async ()=> {
+		globalThis.addEventListener('DOMContentLoaded', async ()=> {
+			await Assets.init({basePath: process.cwd()});
+				// SysNode に置くとテストで【already init()】が出てしまう
 
-		globalThis.addEventListener('DOMContentLoaded', async ()=> this.loaded(hPlg, arg), {once: true, passive: true});
+			await this.loaded(hPlg, arg);
+		}, {once: true, passive: true});
 	}
 	protected override async loaded(hPlg: HPlugin, arg: HSysBaseArg) {
 		await super.loaded(hPlg, arg);

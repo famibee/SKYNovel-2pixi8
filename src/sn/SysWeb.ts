@@ -10,11 +10,11 @@ import {CmnLib, getDateStr, argChk_Boolean, argChk_Num} from './CmnLib';
 import {IHTag, ITag} from './Grammar';
 import {IVariable, IMain, IData4Vari, HPlugin, HSysBaseArg} from './CmnInterface';
 import {Main} from './Main';
-
-import store from 'store';
-import {Application, Assets} from 'pixi.js';
-import 'devtools-detect';
 import {IFn2Path, IConfig} from './ConfigBase';
+
+import {Application, Assets} from 'pixi.js';
+import store from 'store';
+import 'devtools-detect';
 
 
 export class SysWeb extends SysBase {
@@ -25,9 +25,14 @@ export class SysWeb extends SysBase {
 		const a = arg.cur.split('/');
 		this.#path_base = (a.length > 2) ? a.slice(0, -2).join('/') +'/' :'';
 
-		Assets.init({basePath: location.origin});
-
-		globalThis.onload = async ()=> this.loaded(hPlg, arg);
+		queueMicrotask(async ()=> {
+			await Assets.init({basePath: location.origin});
+			await this.loaded(hPlg, arg);
+		});
+		// globalThis.onload = async ()=> {
+		// 	await Assets.init({basePath: location.origin});
+		// 	await this.loaded(hPlg, arg);
+		// }
 	}
 	protected override async loaded(hPlg: HPlugin, arg: HSysBaseArg) {
 		await super.loaded(hPlg, arg);
@@ -52,7 +57,7 @@ export class SysWeb extends SysBase {
 
 		if (argChk_Boolean(CmnLib.hDip, 'dbg', false)) {
 			CmnLib.isDbg = true;
-			this.fetch = (url: string, init?: RequestInit)=> fetch(url, {...init,　mode: 'cors'});
+			this.fetch = (url: string, init?: RequestInit)=> fetch(url, {...init, mode: 'cors'});
 		}
 		this.extPort = argChk_Num(CmnLib.hDip, 'port', this.extPort);
 
