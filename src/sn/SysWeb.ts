@@ -39,12 +39,12 @@ export class SysWeb extends SysBase {
 
 		document.querySelectorAll('[data-prj]').forEach(v=> {
 			const elm = v.attributes.getNamedItem('data-prj');
-			if (elm) v.addEventListener('click', ()=> this.runSN(elm.value), {passive: true});
+			if (elm) v.addEventListener('click', async ()=> this.runSN(elm.value), {passive: true});
 			//if (elm) this.elc.add(v, 'click', ()=> this.runSN(elm.value), {passive: true});
 				// ギャラリーであっても、ここには一度しか来ないので
 		});
 		document.querySelectorAll('[data-reload]').forEach(v=>
-			v.addEventListener('click', ()=> this.run(), {passive: true})
+			v.addEventListener('click', async ()=> this.run(), {passive: true})
 			//this.elc.add(v, 'click', ()=> this.run(), {passive: true})
 				// ギャラリーであっても、ここには一度しか来ないので
 		);
@@ -63,16 +63,16 @@ export class SysWeb extends SysBase {
 
 		const cur = sp.get('cur');
 		if (cur) arg.cur = this.#path_base + cur +'/';
-		this.run();
+		await this.run();
 	}
 
 	#now_prj	= ':';
-	runSN(prj: string) {
+	async runSN(prj: string) {
 		this.arg.cur = this.#path_base + prj +'/';
 		if (this.#now_prj === this.arg.cur) return;
 
 		this.#now_prj = this.arg.cur;
-		this.run();
+		await this.run();
 	}
 	protected	override run = async ()=> {
 		if (this.#main) {

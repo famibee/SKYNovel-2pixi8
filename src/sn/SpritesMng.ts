@@ -83,11 +83,11 @@ export class SpritesMng {
 		this.fncAllComp		= ()=> {};
 		this.#addChild		= sp=> sp.destroy();
 
-		this.#aSp.forEach(sp=> {
-			SpritesMng.stopVideo(sp.label);
+		for (const sp of this.#aSp) {
+			SpritesMng.stopVideo(sp.name);
 			sp.parent?.removeChild(sp);
 			sp.destroy();
-		});
+		}
 		this.#aSp = [];
 	}
 
@@ -119,9 +119,11 @@ export class SpritesMng {
 		}
 
 		const a = csv.split(',');
-		a.forEach(alias=> {
-			if (Assets.cache.has(alias)) return;
-			if (alias in SpritesMng.#hFn2ResAniSpr) return;
+		const len = a.length;
+		for (let i=0; i<len; ++i) {
+			const alias = a[i]!;
+			if (Assets.cache.has(alias)) break;
+			if (alias in SpritesMng.#hFn2ResAniSpr) break;
 
 			try {
 				Assets.add({alias, src: SpritesMng.#cfg.searchPath(alias, SEARCH_PATH_ARG_EXT.SP_GSM)});
@@ -129,9 +131,10 @@ export class SpritesMng {
 			} catch (e) {
 				this.#main.errScript(`画像/動画ロード失敗です SpritesMng.csv2Sprites fn:${alias} ${e}`, false)
 			}
-		});
+		}
 		Assets.load(a).then(rUa=> {
-			a.forEach((alias, i)=> {
+			for (let i=0; i<len; ++i) {
+				const alias = a[i]!;
 				const ua = rUa[alias];
 				const {_frameKeys} = ua;
 //console.log(`fn:SpritesMng.ts line:138 alias:${alias} _frameKeys:%o B:${! (alias in SpritesMng.#hFn2ResAniSpr)} g:%o`, _frameKeys, ua);
@@ -171,7 +174,7 @@ export class SpritesMng {
 				hve.setAttribute('playsinline', '');	// iOS対応
 
 				SpritesMng.#hFn2hve[fn] = hve;
-			});
+			}
 			fncAllComp(needLoad);
 		});
 

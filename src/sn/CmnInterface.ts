@@ -31,11 +31,12 @@ export type T_PLUGIN_INFO = {
 		height	: number;
 	},
 }
+import type {T_SEARCHPATH} from './ConfigBase';
 export type IPluginInitArg = {
 	getInfo(): T_PLUGIN_INFO;
 	addTag(tag_name: string, tag_fnc: ITag): void;
 	addLayCls(cls: string, fnc: ILayerFactory): void;
-	searchPath(fn: string, extptn?: string): string;
+	searchPath: T_SEARCHPATH;
 	getVal(arg_name: string, def?: number | string): object;
 	resume(fnc?: ()=> void): void;
 	render(dsp: Container, renTx?: RenderTexture, clear?: boolean): void;

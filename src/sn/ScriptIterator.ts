@@ -59,7 +59,7 @@ export class ScriptIterator {
 
 	#aCallStk	: CallStack[]	= [];	// FILOバッファ（push/pop）
 
-	readonly	#grm		= new Grammar;
+	readonly	#grm;
 	readonly	#alzTagArg	= new AnalyzeTagArg;
 
 
@@ -108,6 +108,8 @@ export class ScriptIterator {
 		val.defTmp('const.sn.aIfStk.length', ()=> this.#aIfStk.length);
 		val.defTmp('const.sn.vctCallStk.length', ()=> this.#aCallStk.length);
 
+		this.#grm = new Grammar(cfg);
+		
 		const ce = cfg.oCfg.init.escape;
 		this.#grm.setEscape(ce);
 		RubySpliter.setEscape(ce);

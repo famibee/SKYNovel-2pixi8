@@ -1,4 +1,4 @@
-- feat: pixi.js@8.4.1、@pixi/sound@6.0.1 に対応
+- feat: pixi.js@8.6.3、@pixi/sound@6.0.1 に対応
 	- ただし WebGPU を使わず WebGL に固定
 - fix: リファクタリング
 

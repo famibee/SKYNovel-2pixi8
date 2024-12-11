@@ -121,7 +121,7 @@ export class Main implements IMain {
 	destroy() {
 		if (this.#destroyed) return;	// destroy()連打対策
 		this.#destroyed = true;
-		this.#aDest.forEach(f=> f());
+		for (const f of this.#aDest) f();
 		this.#aDest = [];
 	}
 	#destroyed = false;

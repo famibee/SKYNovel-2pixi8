@@ -719,11 +719,11 @@ export class TxtStage extends Container {
 				const st_r_clicked = st_r_normal +(aLnk.r_style_clicked ?? '');
 
 				const nlRt = Array.from(eCh.getElementsByTagName('rt'));
-				nlRt.forEach(e=> e.dataset.st_r_bk = e.style.cssText);
+				for (const e of nlRt) e.dataset.st_r_bk = e.style.cssText;
 				const st_bk = eCh.style.cssText;
 				const fncStyle = (st: string, st_r: string)=> {
 					eCh.style.cssText = st_bk + st;
-					nlRt.forEach(e=> e.style.cssText = e.dataset.st_r_bk + st_r);
+					for (const e of nlRt) e.style.cssText = e.dataset.st_r_bk + st_r;
 				};
 
 				const enabled = argChk_Boolean(aLnk, 'enabled', true);
@@ -746,9 +746,13 @@ export class TxtStage extends Container {
 
 		// 文字出現演出・開始〜終了
 		const chs = Array.from(this.#htmTxt.getElementsByClassName('sn_ch'));
+		const lenChs = chs.length;
 		this.#fncEndChIn = ()=> {
 			this.#fncEndChIn = ()=> false;
-			chs.forEach(v=> v.className = v.className.replaceAll(/ go_ch_in_[^\s"]+/g, ''));
+			for (let i=0; i<lenChs; ++i) {
+				const v = chs[i]!;
+				v.className = v.className.replaceAll(/ go_ch_in_[^\s"]+/g, '');
+			}
 			TxtStage.#cntBreak.position.set(
 				this.#hyph.break_fixed_left,
 				this.#hyph.break_fixed_top,
@@ -766,7 +770,10 @@ export class TxtStage extends Container {
 			return true;
 		};
 
-		chs.forEach(v=> v.className = v.className.replaceAll(/sn_ch_in_([^\s"]+)/g, 'go_ch_in_$1'));
+		for (let i=0; i<lenChs; ++i) {
+			const v = chs[i]!;
+			v.className = v.className.replaceAll(/sn_ch_in_([^\s"]+)/g, 'go_ch_in_$1');
+		}
 		if (begin > 0) ++begin;	// 末尾改行削除挙動対策
 
 		// 文字表示に時間をかける最後の文字を探す。末尾はダミー（#SPAN_LAST）

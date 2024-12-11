@@ -185,7 +185,10 @@ export class ReadState {
 		if (! KeY.startsWith('dom=')) return;
 
 		const e2f = glb ? hGlobalEvt2Fnc[key] : hLocalEvt2Fnc[key];
-		if (e2f) ReadState.getHtmlElmList(KeY).el.forEach(v=> v.removeEventListener('click', e2f));
+		if (e2f) {
+			const a = Array.from(ReadState.getHtmlElmList(KeY).el);
+			for (const v of a) v.removeEventListener('click', e2f);
+		}
 		if (glb) delete hGlobalEvt2Fnc[key]; else delete hLocalEvt2Fnc[key];
 	}
 
@@ -196,7 +199,8 @@ export class ReadState {
 		for (const [KeY, e2f] of Object.entries(h)) {
 			if (! KeY.startsWith('dom=')) continue;
 
-			ReadState.getHtmlElmList(KeY).el.forEach(v=> v.removeEventListener('click', e2f));
+			const a = Array.from(ReadState.getHtmlElmList(KeY).el);
+			for (const v of a) v.removeEventListener('click', e2f);
 		}
 		if (glb) hGlobalEvt2Fnc = {}; else hLocalEvt2Fnc = {};
 

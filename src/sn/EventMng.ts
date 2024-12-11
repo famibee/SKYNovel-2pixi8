@@ -467,27 +467,33 @@ export class EventMng implements IEvtMng {
 				case 'textarea':	aEv = ['input', 'change'];	break;
 			}
 
-			aEv.forEach((v, i)=> g.el.forEach(elm=> {
-				this.#elc.add(elm, v, e=> {
-					if (! this.#rs.isWait || this.layMng.getFrmDisabled(g.id)) return;
-					if (v === 'keydown' && e.key !== 'Enter') return;
+			const len = aEv.length;
+			for (let i=0; i<len; ++i) {
+				const v = aEv[i]!;
+				const len = g.el.length;
+				for (let j=0; j<len; ++j) {
+					const elm = g.el[j]!;
+					this.#elc.add(elm, v, e=> {
+						if (! this.#rs.isWait || this.layMng.getFrmDisabled(g.id)) return;
+						if (v === 'keydown' && e.key !== 'Enter') return;
+	
+						const d = elm.dataset;
+						for (const [k, v] of Object.entries(d)) this.val.setVal_Nochk('tmp', `sn.event.domdata.${k}`, v);
+						this.#rs.fire(KeY, e);
+					});
 
-					const d = elm.dataset;
-					for (const [k, v] of Object.entries(d)) this.val.setVal_Nochk('tmp', `sn.event.domdata.${k}`, v);
-					this.#rs.fire(KeY, e);
-				});
-
-				// フォーカス処理対象として登録
-				if (i === 0) this.#fcs.add(
-					elm,
-					()=> {
-						if (! this.#canFocus(elm)) return false;
-						elm.focus();
-						return true;
-					},
-					()=> {},
-				);
-			}));
+					// フォーカス処理対象として登録
+					if (i === 0) this.#fcs.add(
+						elm,
+						()=> {
+							if (! this.#canFocus(elm)) return false;
+							elm.focus();
+							return true;
+						},
+						()=> {},
+					);
+				}
+			}
 
 			// return;	// hGlobalEvt2Fnc(hLocalEvt2Fnc)登録もする
 		}
@@ -525,15 +531,18 @@ export class EventMng implements IEvtMng {
 			const g = ReadState.getHtmlElmList(add);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 
-			g.el.forEach(elm=> this.#fcs.add(
-				elm,
-				()=> {
-					if (! this.#canFocus(elm)) return false;
-					elm.focus();
-					return true;
-				},
-				()=> {},
-			));
+			for (const key in g.el) {
+				const elm = g.el[key]!;
+				this.#fcs.add(
+					elm,
+					()=> {
+						if (! this.#canFocus(elm)) return false;
+						elm.focus();
+						return true;
+					},
+					()=> {},
+				);
+			}
 			return false;
 		}
 
@@ -541,7 +550,7 @@ export class EventMng implements IEvtMng {
 			const g = ReadState.getHtmlElmList(del);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 
-			g.el.forEach(elm=> this.#fcs.remove(elm));
+			for (const key in g.el) this.#fcs.remove(g.el[key]!);
 			return false;
 		}
 

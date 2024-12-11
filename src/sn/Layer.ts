@@ -133,7 +133,7 @@ export class Layer {
 				const m = matrix.split(',');
 				const len = m.length;
 				if (len !== 20) throw `matrix の個数（${len}）が 20 ではありません`;
-				m.forEach((v, i)=> f.matrix[i] = uint(v));
+				for (let i=0; i<len; ++i) f.matrix[i] = uint(m[i]);
 			}
 			else {
 				f.matrix[0] = uint(argChk_Num(hArg, 'rtor', 1));

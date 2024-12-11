@@ -15,7 +15,7 @@ import {DebugMng} from './DebugMng';
 import {Application, Assets} from 'pixi.js';
 import {HINFO, HPROC, SAVE_WIN_INF} from '../preload';
 import {IpcRendererEvent, MessageBoxOptions} from 'electron/renderer';
-const to_app: HPROC = window.to_app;
+const to_app: HPROC = (window as any).to_app;
 //const {to_app} = window;
 
 
@@ -45,7 +45,7 @@ export class SysApp extends SysNode {
 		CmnLib.isDbg = Boolean(this.#hInfo.env['SKYNOVEL_DBG']) && ! CmnLib.isPackaged;	// 配布版では無効
 		if (CmnLib.isDbg) this.extPort = uint(this.#hInfo.env['SKYNOVEL_PORT'] ?? '3776');
 
-		this.run();
+		await this.run();
 	}
 	#hInfo:  HINFO = {
 		getAppPath	: '',

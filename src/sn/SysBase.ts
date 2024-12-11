@@ -256,7 +256,7 @@ console.log(`fn:SysBase.ts line:93 `);
 				if (this.hFactoryCls[cls]) throw `すでに定義済みのレイヤcls【${cls}】です`;
 				this.hFactoryCls[cls] = fnc;
 			},
-			searchPath: (fn, extptn = '')=>	this.cfg.searchPath(fn, extptn),
+			searchPath: (fn, extptn = SEARCH_PATH_ARG_EXT.DEFAULT)=>	this.cfg.searchPath(fn, extptn),
 			getVal: val.getVal,
 			resume: ()=> main.resume(),
 			render: (ctn: Container, rt: RenderTexture, clear = false)=> appPixi.renderer.render({container: ctn, target: rt, clear}),
@@ -440,12 +440,12 @@ console.log(`fn:SysBase.ts line:93 `);
 		},
 		continue	: ()=> this.toast('再生'),
 		disconnect	: ()=> this.toast('切断'),
-		restart		: o=> {
+		restart		: async o=> {
 			this.send2Dbg(o?.ri ?? '', {});
 			this.end();
 			// これ以前の this は旧Main。以後は this必須
 			// 以後は新Mainによる本メソッドinit()→launch接続待ち
-			this.run();
+			await this.run();
 		},
 		pause			: ()=> this.toast('一時停止'),
 		stopOnEntry		: ()=> this.toast('一時停止'),
@@ -460,10 +460,10 @@ console.log(`fn:SysBase.ts line:93 `);
 	};
 	protected toast(nm: string) {
 		const p = document.body;
-		[
+		for (const e of [
 			...Array.from(p.getElementsByClassName('sn_BounceIn')),
 			...Array.from(p.getElementsByClassName('sn_HopIn')),
-		].forEach(e=> e.remove());
+		]) e.remove();
 
 		const img = document.createElement('img');
 		const td = SysBase.#hToastDat[nm];
