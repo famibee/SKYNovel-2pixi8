@@ -5,9 +5,9 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {AnalyzeTagArg} from "./AnalyzeTagArg";
-import {getFn} from "./CmnLib";
-import {IConfig, SEARCH_PATH_ARG_EXT} from "./ConfigBase";
+import {AnalyzeTagArg} from './AnalyzeTagArg';
+import {getFn} from './CmnLib';
+import {type IConfig, SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
 
 export type HArg = {

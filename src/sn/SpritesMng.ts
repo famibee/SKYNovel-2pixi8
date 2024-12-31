@@ -6,13 +6,13 @@
 ** ***** END LICENSE BLOCK ***** */
 
 import {Config} from './Config';
-import {IEvtMng, argChk_Boolean, argChk_Num, int} from './CmnLib';
-import {IMain, IVariable} from './CmnInterface';
+import {type IEvtMng, argChk_Boolean, argChk_Num, int} from './CmnLib';
+import type {IMain, IVariable} from './CmnInterface';
 import {DebugMng} from './DebugMng';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
-import {SysBase} from './SysBase';
-import {SoundMng} from './SoundMng';
-import {HArg} from './Grammar';
+import type {SysBase} from './SysBase';
+import type {SoundMng} from './SoundMng';
+import type {HArg} from './Grammar';
 import {Layer} from './Layer';
 
 import {AnimatedSprite, BLEND_MODES, Container, Sprite, Texture, Assets, VideoSource} from 'pixi.js';

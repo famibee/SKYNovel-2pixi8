@@ -5,17 +5,17 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
-import {HArg} from './Grammar';
-import {Config} from './Config';
+import {CmnLib, type IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import type {HArg} from './Grammar';
+import type {Config} from './Config';
 import {CmnTween} from './CmnTween';
 import {SpritesMng} from './SpritesMng';
 import {DebugMng} from './DebugMng';
-import {IMakeDesignCast} from './LayerMng';
+import type {IMakeDesignCast} from './LayerMng';
 //import {TxtLayDesignCast, TxtLayPadDesignCast} from './DesignCast';
-import {SysBase} from './SysBase';
-import {Hyphenation, IChRect} from './Hyphenation';
-import {ScriptIterator} from './ScriptIterator';
+import type {SysBase} from './SysBase';
+import {Hyphenation, type IChRect} from './Hyphenation';
+import type {ScriptIterator} from './ScriptIterator';
 import {ReadState} from './ReadState';
 
 import {Container, Texture, Sprite, Graphics, Rectangle, Renderer, Application, Color} from 'pixi.js';
@@ -746,13 +746,9 @@ export class TxtStage extends Container {
 
 		// 文字出現演出・開始〜終了
 		const chs = Array.from(this.#htmTxt.getElementsByClassName('sn_ch'));
-		const lenChs = chs.length;
 		this.#fncEndChIn = ()=> {
 			this.#fncEndChIn = ()=> false;
-			for (let i=0; i<lenChs; ++i) {
-				const v = chs[i]!;
-				v.className = v.className.replaceAll(/ go_ch_in_[^\s"]+/g, '');
-			}
+			for (const v of chs) v.className = v.className.replaceAll(/ go_ch_in_[^\s"]+/g, '');
 			TxtStage.#cntBreak.position.set(
 				this.#hyph.break_fixed_left,
 				this.#hyph.break_fixed_top,
@@ -770,10 +766,7 @@ export class TxtStage extends Container {
 			return true;
 		};
 
-		for (let i=0; i<lenChs; ++i) {
-			const v = chs[i]!;
-			v.className = v.className.replaceAll(/sn_ch_in_([^\s"]+)/g, 'go_ch_in_$1');
-		}
+		for (const v of chs) v.className = v.className.replaceAll(/sn_ch_in_([^\s"]+)/g, 'go_ch_in_$1');
 		if (begin > 0) ++begin;	// 末尾改行削除挙動対策
 
 		// 文字表示に時間をかける最後の文字を探す。末尾はダミー（#SPAN_LAST）

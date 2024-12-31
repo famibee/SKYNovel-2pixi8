@@ -5,12 +5,12 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {SysBase} from "./SysBase";
+import {SysBase} from './SysBase';
 import {CmnLib, getDateStr, argChk_Boolean, argChk_Num} from './CmnLib';
-import {IHTag, ITag} from './Grammar';
-import {IVariable, IMain, IData4Vari, HPlugin, HSysBaseArg} from './CmnInterface';
+import type {IHTag, ITag} from './Grammar';
+import type {IVariable, IMain, IData4Vari, T_SysBaseParams, T_SysBaseLoadedParams} from './CmnInterface';
 import {Main} from './Main';
-import {IFn2Path, IConfig} from './ConfigBase';
+import type {IFn2Path, IConfig} from './ConfigBase';
 
 import {Application, Assets} from 'pixi.js';
 import store from 'store';
@@ -18,8 +18,8 @@ import 'devtools-detect';
 
 
 export class SysWeb extends SysBase {
-	#path_base	= '';
-	constructor(hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}) {
+	#path_base;
+	constructor(...[hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}]: T_SysBaseParams) {	// DOMContentLoaded は呼び出し側でやる
 		super(hPlg, arg);
 
 		const a = arg.cur.split('/');
@@ -29,12 +29,8 @@ export class SysWeb extends SysBase {
 			await Assets.init({basePath: location.origin});
 			await this.loaded(hPlg, arg);
 		});
-		// globalThis.onload = async ()=> {
-		// 	await Assets.init({basePath: location.origin});
-		// 	await this.loaded(hPlg, arg);
-		// }
 	}
-	protected override async loaded(hPlg: HPlugin, arg: HSysBaseArg) {
+	protected override async loaded(...[hPlg, arg]: T_SysBaseLoadedParams) {
 		await super.loaded(hPlg, arg);
 
 		document.querySelectorAll('[data-prj]').forEach(v=> {
@@ -75,13 +71,7 @@ export class SysWeb extends SysBase {
 		await this.run();
 	}
 	protected	override run = async ()=> {
-		if (this.#main) {
-			const ms_late = 10;	// NOTE: ギャラリーでのえもふり/Live 2D用・魔法数字
-			this.#main.destroy();
-			await new Promise(rs=> setTimeout(rs, ms_late));
-				// clearTimeout()不要と判断
-		}
-
+		if (this.#main) this.#main.destroy();
 		this.#main = new Main(this);
 	}
 	stop() {
@@ -96,7 +86,7 @@ export class SysWeb extends SysBase {
 		await super.loadPath(hPathFn2Exts, cfg);
 
 		const fn = this.arg.cur +'path.json';
-		const res = await fetch(fn);
+		const res = await this.fetch(fn);
 		if (! res.ok) throw Error(res.statusText);
 
 		const src = await res.text();
@@ -115,7 +105,7 @@ export class SysWeb extends SysBase {
 		hTmp['const.sn.isDebugger'] = (hn === 'localhost' || hn ==='127.0.0.1');
 
 		const ns = this.cfg.getNs();
-		this.flushSub = this.crypto
+		this.flushSub = this.arg.crypto
 		? async ()=> {
 			store.set(ns +'sys_', await this.enc(JSON.stringify(this.data.sys)));
 			store.set(ns +'mark_', await this.enc(JSON.stringify(this.data.mark)));
@@ -138,7 +128,7 @@ export class SysWeb extends SysBase {
 		}
 
 		// データがある場合の処理
-		if (! this.crypto) {
+		if (! this.arg.crypto) {
 			this.data.sys = store.get(ns +'sys');
 			this.data.mark = store.get(ns +'mark');
 			this.data.kidoku = store.get(ns +'kidoku');
@@ -195,7 +185,7 @@ export class SysWeb extends SysBase {
 		super.cvsResize();
 
 		if (this.isFullScr) {
-			const s = Main.cvs.style;
+			const s = this.main.cvs.style;
 			s.width = s.height = '';	// ブラウザ版のセンタリングに必須
 		}
 	}
@@ -211,12 +201,12 @@ export class SysWeb extends SysBase {
 				'mark': this.data.mark,
 				'kidoku': this.data.kidoku,
 			});
-			const s2 = this.crypto ?await this.enc(s) :s;
+			const s2 = this.arg.crypto ?await this.enc(s) :s;
 			const blob = new Blob([s2], {'type':'text/json'});
 
 			const a = document.createElement('a');
 			a.href = URL.createObjectURL(blob);
-			a.download = (this.crypto ?'' :'no_crypto_')
+			a.download = (this.arg.crypto ?'' :'no_crypto_')
 				+ this.cfg.getNs() + getDateStr('-', '_', '') +'.swpd';
 			a.click();
 
@@ -242,7 +232,7 @@ export class SysWeb extends SysBase {
 		})
 		.then(async blob=> {
 			const s = await blob.text();
-			const o = JSON.parse(this.crypto ?await this.dec('json', s) :s);
+			const o = JSON.parse(this.arg.crypto ?await this.dec('json', s) :s);
 			if (! o.sys || ! o.mark || ! o.kidoku) throw new Error('異常なプレイデータです');
 			if (o.sys[SysBase.VALNM_CFG_NS] !== this.cfg.oCfg.save_ns) {
 				console.error(`別のゲーム【プロジェクト名=${o.sys[SysBase.VALNM_CFG_NS]}】のプレイデータです`);

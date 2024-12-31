@@ -5,15 +5,14 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {IHTag, ITag} from './Grammar';
-import {IVariable, ISysBase, IData4Vari, HPlugin, HSysBaseArg, ILayerFactory, IMain, IFire, IFncHook, PLUGIN_DECAB_RET, T_PLUGIN_INFO} from './CmnInterface';
+import type {IHTag, ITag} from './Grammar';
+import type {IVariable, ISysBase, IData4Vari, ILayerFactory, IMain, IFire, IFncHook, PLUGIN_DECAB_RET, T_PLUGIN_INFO, T_SysBaseLoadedParams, HPlugin, HSysBaseArg} from './CmnInterface';
 import {argChk_Boolean, CmnLib, getFn} from './CmnLib';
 import {EventListenerCtn} from './EventListenerCtn';
-import {Main} from './Main';
+import {type IConfig, type IFn2Path, type ISysRoots, SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
 import {Application, Container, extensions, ExtensionType, LoaderParserPriority, RenderTexture, Texture} from 'pixi.js';
 import {io, Socket} from 'socket.io-client';
-import {IConfig, IFn2Path, ISysRoots, SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
 
 export class SysBase implements ISysRoots, ISysBase {
@@ -21,11 +20,11 @@ export class SysBase implements ISysRoots, ISysBase {
 
 	protected	readonly	elc		= new EventListenerCtn;
 
-	constructor(readonly hPlg: HPlugin = {}, protected arg: HSysBaseArg) {}
-	protected async loaded(hPlg: HPlugin, _arg: HSysBaseArg) {
+	constructor(readonly hPlg: HPlugin = {}, public arg: HSysBaseArg) {}
+	protected async loaded(...[hPlg,]: T_SysBaseLoadedParams) {
 		extensions.add(this.#PixiExt_sn);
 		extensions.add(this.#PixiExt_htm);
-		if (this.crypto) {
+		if (this.arg.crypto) {
 			extensions.add(this.#pixiExt_binpic);
 			extensions.add(this.#PixiExt_json);
 		}
@@ -47,8 +46,6 @@ export class SysBase implements ISysRoots, ISysBase {
 			getHash: fnc=> this.hash = fnc,
 		});
 	}
-	get cur() {return this.arg.cur}
-	get crypto() {return this.arg.crypto}
 	fetch = (url: string, init?: RequestInit)=> fetch(url, init);
 
 	destroy() {
@@ -199,8 +196,10 @@ console.log(`fn:SysBase.ts line:93 `);
 
 
 	protected	val		: IVariable;
+	protected	main	: IMain;
 	init(hTag: IHTag, appPixi: Application, val: IVariable, main: IMain): Promise<void>[] {
 		this.val = val;
+		this.main = main;
 		let mes = '';
 		try {
 			val.setSys(this);
@@ -294,7 +293,7 @@ console.log(`fn:SysBase.ts line:93 `);
 	cvsResize() {
 		let w = globalThis.innerWidth;
 		let h = globalThis.innerHeight;
-		const cvs = Main.cvs;
+		const cvs = this.main.cvs;
 		const isGallery = cvs.parentElement !== document.body;
 		if (isGallery) {
 			const st = globalThis.getComputedStyle(cvs);
@@ -477,7 +476,7 @@ left: ${(CmnLib.stageW -size) /2 *this.#cvsScale +size *(td.dx ?? 0)}px;
 top: ${(CmnLib.stageH -size) /2 *this.#cvsScale +size *(td.dy ?? 0)}px;`;
 		img.classList.add('sn_toast', td.ease ?? 'sn_BounceInOut');
 		if (! td.ease) img.addEventListener('animationend', ()=> p.removeChild(img), {once: true, passive: true});
-		p.insertBefore(img, Main.cvs);
+		p.insertBefore(img, this.main.cvs);
 	}
 	static	readonly	#hToastDat
 	: {[nm: string] :{dat: string, dx?: number, dy?: number, ease?: string}}	= {	// Thanks ICOOON MONO https://icooon-mono.com/ 、 https://vectr.com/ で 640x640化、ImageOptim経由、Base64エンコーダー https://lab.syncer.jp/Tool/Base64-encode/ 

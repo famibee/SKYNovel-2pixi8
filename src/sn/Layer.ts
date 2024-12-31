@@ -6,8 +6,8 @@
 ** ***** END LICENSE BLOCK ***** */
 
 import {CmnLib, int, argChk_Boolean, argChk_Num, uint} from './CmnLib';
-import {HArg} from './Grammar';
-import {IMakeDesignCast} from './LayerMng';
+import type {HArg} from './Grammar';
+import type {IMakeDesignCast} from './LayerMng';
 
 import {BLEND_MODES, Container, Sprite, BlurFilter, ColorMatrixFilter, NoiseFilter, Filter, Renderer} from 'pixi.js';
 

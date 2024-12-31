@@ -5,20 +5,21 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {SysBase} from "./SysBase";
+import {SysBase} from './SysBase';
 import {CmnLib} from './CmnLib';
-import {IFn2Path, IConfig} from './ConfigBase';
-import {IVariable, IMain} from "./CmnInterface";
-import {IHTag} from "./Grammar";
+import type {IFn2Path, IConfig} from './ConfigBase';
+import type {IVariable, IMain} from './CmnInterface';
+import type {IHTag} from './Grammar';
 
-import {Application} from "pixi.js";
+import type {Application} from 'pixi.js';
+
 
 export class SysNode extends SysBase {
 	override async loadPath(hPathFn2Exts: IFn2Path, cfg: IConfig) {
 		await super.loadPath(hPathFn2Exts, cfg);
 
 		const fn = this.arg.cur +'path.json';
-		const src = await this.readFileSync(fn);
+		const src = await (await this.fetch(fn)).text();
 		const oJs = JSON.parse(await this.dec(fn, src));
 		for (const [nm, v] of Object.entries(oJs)) {
 			const h = hPathFn2Exts[nm] = <any>v;

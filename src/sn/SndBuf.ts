@@ -5,11 +5,11 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
-import {IVariable, IMain} from './CmnInterface';
+import {type IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import type {IVariable, IMain} from './CmnInterface';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
-import {Config} from './Config';
-import {HArg} from './Grammar';
+import type {Config} from './Config';
+import type {HArg} from './Grammar';
 import {CmnTween} from './CmnTween';
 import {disableEvent, enableEvent} from './ReadState';
 

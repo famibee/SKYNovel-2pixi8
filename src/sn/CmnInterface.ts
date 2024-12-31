@@ -5,7 +5,7 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {HArg, ITag} from './Grammar';
+import type {HArg, ITag} from './Grammar';
 
 export interface IMyTrace {
 	(txt: string, lvl?: string, fnline?: boolean, adjust_line?: number): void;
@@ -63,6 +63,15 @@ export type HSysBaseArg = {
 	crypto	: boolean;
 	dip		: string;
 }
+export type T_SysBaseParams = [
+	hPlg	: HPlugin,
+	arg?	: HSysBaseArg,
+];
+export type T_SysBaseLoadedParams = [
+	hPlg	: HPlugin,
+	arg		: HSysBaseArg,
+];
+
 
 export type SYS_DEC_RET = HTMLImageElement | HTMLVideoElement | ArrayBuffer;
 export interface ISysBase {
@@ -88,6 +97,7 @@ export interface IFncHook {(type: string, o: any): void};
 // =============== Main
 export interface IMain {
 	errScript(mes: string, isThrow? :boolean): void;
+	cvs			: HTMLCanvasElement;
 	resume(fnc?: ()=> void): void;
 	resumeByJumpOrCall(hArg: HArg): void;
 	stop(): void;

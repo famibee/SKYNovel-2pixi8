@@ -5,9 +5,9 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {T_CFG} from './sn/ConfigBase';
+import type {T_CFG} from './sn/ConfigBase';
 
-import {contextBridge, ipcRenderer, IpcRendererEvent, MessageBoxOptions, MessageBoxReturnValue} from 'electron';
+import {contextBridge, ipcRenderer, type IpcRendererEvent, type MessageBoxOptions, type MessageBoxReturnValue} from 'electron';
 
 export	type	TAG_WINDOW	= {
 	c	: boolean;
@@ -27,6 +27,8 @@ export	type	SAVE_WIN_INF	= {
 };
 
 export	type	HPROC	= {
+	openDevTools	: ()=> void;
+
 	getInfo		: ()=> Promise<HINFO>;
 	inited		: (oCfg: T_CFG, tagW: TAG_WINDOW)=> Promise<void>;
 
@@ -50,8 +52,6 @@ export	type	HPROC	= {
 	capturePage	: (fn: string, w: number, h: number)=> Promise<void>;
 	navigate_to	: (url: string)=> void;
 
-	openDevTools	: ()=> void;
-
 	Store	: (o: object)=> Promise<void>;
 	flush	: (o: object)=> Promise<void>;
 	Store_isEmpty	: ()=> Promise<boolean>;
@@ -64,20 +64,20 @@ export	type	HPROC	= {
 	on: (channel: string, callback: Function) => void;
 };
 
-export	type	HINFO	= {
-	getAppPath	: string;
-	isPackaged	: boolean;
-	downloads	: string;
-	userData	: string;
-	getVersion	: string;
-	env			: {[name: string]: any};
-	platform	: string;
-	arch		: string;
-}
+	export	type	HINFO	= {
+		getAppPath	: string;
+		isPackaged	: boolean;
+		downloads	: string;
+		userData	: string;
+		getVersion	: string;
+		env			: {[name: string]: any};
+		platform	: string;
+		arch		: string;
+	}
 
 const fncE = console.error;
 
-export const	hProc	: HPROC	= {
+export const	hProc	: HPROC = {
 	// console.log は【アプリ】のターミナルに出る
 	getInfo		: ()=> ipcRenderer.invoke('getInfo').catch(fncE),
 	inited		: (oCfg: T_CFG, tagW: TAG_WINDOW)=> ipcRenderer.invoke('inited', oCfg, tagW).catch(fncE),

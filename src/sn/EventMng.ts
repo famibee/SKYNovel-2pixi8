@@ -5,24 +5,23 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, IEvtMng, argChk_Boolean, addStyle, mesErrJSON} from './CmnLib';
-import {IHTag, HArg} from './Grammar';
-import {IVariable, IMain, IHEvt2Fnc} from './CmnInterface';
-import {LayerMng} from './LayerMng';
-import {ScriptIterator} from './ScriptIterator';
+import {CmnLib, type IEvtMng, argChk_Boolean, addStyle, mesErrJSON} from './CmnLib';
+import type {IHTag, HArg} from './Grammar';
+import type {IVariable, IMain, IHEvt2Fnc} from './CmnInterface';
+import type {LayerMng} from './LayerMng';
+import type {ScriptIterator} from './ScriptIterator';
 import {TxtLayer} from './TxtLayer';
 import {EventListenerCtn} from './EventListenerCtn';
 import {Button} from './Button';
 import {FocusMng} from './FocusMng';
-import {Main} from './Main';
-import {SoundMng} from './SoundMng';
-import {Config} from './Config';
+import type {SoundMng} from './SoundMng';
+import type {Config} from './Config';
 import {SysBase} from './SysBase';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 import {ReadState} from './ReadState';
 
 import {Application, Assets, Container} from 'pixi.js';
-import {createPopper, Instance as InsPop} from '@popperjs/core';
+import {createPopper, type Instance as InsPop} from '@popperjs/core';
 
 export class EventMng implements IEvtMng {
 	readonly	#elc		= new EventListenerCtn;
@@ -31,7 +30,7 @@ export class EventMng implements IEvtMng {
 
 	#rs	: ReadState;
 
-	constructor(private readonly cfg: Config, private readonly hTag: IHTag, readonly appPixi: Application, private readonly main: IMain, readonly layMng: LayerMng, readonly val: IVariable, sndMng: SoundMng, private readonly scrItr: ScriptIterator, readonly sys: SysBase) {
+	constructor(private readonly cfg: Config, private readonly hTag: IHTag, readonly appPixi: Application, private readonly main: IMain, private readonly layMng: LayerMng, private readonly val: IVariable, sndMng: SoundMng, private readonly scrItr: ScriptIterator, private readonly sys: SysBase) {
 		//	イベント
 		hTag.clear_event	= o=> ReadState.clear_event(o);	// イベントを全消去
 		// enable_event		// LayerMng.ts内で定義		//イベント有無の切替
@@ -114,9 +113,7 @@ export class EventMng implements IEvtMng {
 .sn_hint[data-popper-placement^='right']	> .sn_hint_ar {left: -4px;}
 `);
 
-		for (const v of Array.from(document.getElementsByClassName('sn_hint'))) v.parentElement?.removeChild(v);
-			// ギャラリーリロード用初期化
-		Main.cvs.parentElement?.insertAdjacentHTML('beforeend', `
+		this.main.cvs.parentElement?.insertAdjacentHTML('beforeend', `
 <div class="sn_hint" role="tooltip">
 	<span>Dummy</span>
 	<div class="sn_hint_ar" data-popper-arrow></div>
@@ -136,7 +133,7 @@ export class EventMng implements IEvtMng {
 			}
 		});
 		this.#elc.add(window, 'keydown', e=> this.#ev_keydown(e));
-		this.#elc.add(Main.cvs, 'contextmenu', e=> this.#ev_contextmenu(e));
+		this.#elc.add(this.main.cvs, 'contextmenu', e=> this.#ev_contextmenu(e));
 
 		// 言語切り替え通知
 		const fncUpdNavLang = ()=> val.setVal_Nochk('tmp', 'const.sn.navigator.language', navigator.language);
@@ -164,10 +161,10 @@ export class EventMng implements IEvtMng {
 
 		let procWheel4wle = (_elc: EventListenerCtn, _onIntr: ()=> void)=> {};
 		if ('WheelEvent' in window) {
-			this.#elc.add(Main.cvs, 'wheel', e=> this.#ev_wheel(e), {passive: true});
+			this.#elc.add(this.main.cvs, 'wheel', e=> this.#ev_wheel(e), {passive: true});
 			this.#resvFlameEvent4Wheel = win=> this.#elc.add(win, 'wheel', e=> this.#ev_wheel(e), {passive: true});
 
-			procWheel4wle = (elc: EventListenerCtn, fnc: ()=> void)=> elc.add(Main.cvs, 'wheel', e=> {
+			procWheel4wle = (elc: EventListenerCtn, fnc: ()=> void)=> elc.add(this.main.cvs, 'wheel', e=> {
 				//if (! e.isTrusted) return;
 				if (e['isComposing']) return; // サポートしてない環境でもいける書き方
 				if (e.deltaY <= 0) return;
@@ -220,7 +217,7 @@ export class EventMng implements IEvtMng {
 					((! cmp || cmp instanceof Container) ?globalThis :cmp)
 					.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
 				}
-				else Main.cvs.dispatchEvent(new Event('contextmenu'));
+				else this.main.cvs.dispatchEvent(new Event('contextmenu'));
 			});
 			gamepad.start();
 
@@ -292,6 +289,8 @@ export class EventMng implements IEvtMng {
 	}
 
 	destroy() {
+		for (const v of Array.from(document.getElementsByClassName('sn_hint'))) v.parentElement?.removeChild(v);	// ギャラリーリロード用初期化
+
 		this.#rs.destroy();
 		this.#fcs.destroy();
 		this.#elc.clear();
@@ -470,9 +469,7 @@ export class EventMng implements IEvtMng {
 			const len = aEv.length;
 			for (let i=0; i<len; ++i) {
 				const v = aEv[i]!;
-				const len = g.el.length;
-				for (let j=0; j<len; ++j) {
-					const elm = g.el[j]!;
+				g.el.forEach(elm=> {
 					this.#elc.add(elm, v, e=> {
 						if (! this.#rs.isWait || this.layMng.getFrmDisabled(g.id)) return;
 						if (v === 'keydown' && e.key !== 'Enter') return;
@@ -492,7 +489,7 @@ export class EventMng implements IEvtMng {
 						},
 						()=> {},
 					);
-				}
+				});
 			}
 
 			// return;	// hGlobalEvt2Fnc(hLocalEvt2Fnc)登録もする
@@ -531,18 +528,15 @@ export class EventMng implements IEvtMng {
 			const g = ReadState.getHtmlElmList(add);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 
-			for (const key in g.el) {
-				const elm = g.el[key]!;
-				this.#fcs.add(
-					elm,
-					()=> {
-						if (! this.#canFocus(elm)) return false;
-						elm.focus();
-						return true;
-					},
-					()=> {},
-				);
-			}
+			g.el.forEach(elm=> this.#fcs.add(
+				elm,
+				()=> {
+					if (! this.#canFocus(elm)) return false;
+					elm.focus();
+					return true;
+				},
+				()=> {},
+			));
 			return false;
 		}
 
@@ -550,7 +544,7 @@ export class EventMng implements IEvtMng {
 			const g = ReadState.getHtmlElmList(del);
 			if (g.el.length === 0 && argChk_Boolean(hArg, 'need_err', true)) throw `HTML内にセレクタ（${g.sel}）に対応する要素が見つかりません。存在しない場合を許容するなら、need_err=false と指定してください`;
 
-			for (const key in g.el) this.#fcs.remove(g.el[key]!);
+			g.el.forEach(elm=> this.#fcs.remove(elm));
 			return false;
 		}
 

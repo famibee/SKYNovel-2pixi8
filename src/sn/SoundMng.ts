@@ -5,11 +5,11 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
-import {IHTag, HArg} from './Grammar';
-import {IVariable, IMain, INoticeChgVolume} from './CmnInterface';
-import {Config} from './Config';
-import {BUF_BGM, BUF_SE, HSndBuf, SndBuf} from './SndBuf';
+import {type IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import type {IHTag, HArg} from './Grammar';
+import type {IVariable, IMain, INoticeChgVolume} from './CmnInterface';
+import type {Config} from './Config';
+import {BUF_BGM, BUF_SE, type HSndBuf, SndBuf} from './SndBuf';
 
 import {sound, utils} from '@pixi/sound';
 
@@ -17,7 +17,7 @@ import {sound, utils} from '@pixi/sound';
 export class SoundMng {
 	#hSndBuf	: HSndBuf	= {};
 
-	constructor(cfg: Config, hTag: IHTag, readonly val: IVariable, main: IMain) {
+	constructor(cfg: Config, hTag: IHTag, private readonly val: IVariable, main: IMain) {
 		hTag.volume		= o=> this.#volume(o);		// 音量設定（独自拡張）
 		hTag.fadebgm	= o=> this.#fadebgm(o);		// BGMのフェード
 		hTag.fadeoutbgm	= o=> this.#fadeoutbgm(o);	// BGMのフェードアウト

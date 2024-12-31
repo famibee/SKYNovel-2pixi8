@@ -1,21 +1,23 @@
 {
 	"name": "@famibee/skynovel",
-	"version": "1.60.5",
+	"version": "1.61.10",
 	"description": "webgl novelgame framework",
 	"author": "miyazawa famibee",
 	"publisher": "famibee",
 	"license": "MIT",
-	"main": "dist/web.js",
-	"types": "dist/index.d.ts",
-	"files": ["dist"],
+	"main": "./dist/web.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
 	"engines": {
-		"node": ">=22.11"
+		"node": ">=22.12"
 	},
 	"exports": {
 		".": "./dist/web.js",
 		"./web": "./dist/web.js",
-		"./app": "./dist/app.js",
-		"./appMain": "./dist/appMain.js"
+		"./appMain": "./dist/appMain.js",
+		"./app": "./dist/app.js"
 	},
 	"dependencies": {
 		"@pixi/sound": "^6.0.1",
@@ -27,14 +29,16 @@
 		"fs-extra": "^11.2.0",
 		"gamepad.js": "^2.1.0",
 		"parsimmon": "^1.18.1",
-		"pixi.js": "^8.6.4",
+		"pixi.js": "^8.6.6",
 		"platform": "^1.3.6",
 		"socket.io-client": "^4.8.1",
 		"store": "^2.0.12",
 		"xml2js": "^0.6.2"
 	},
 	"devDependencies": {
-		"@happy-dom/global-registrator": "^15.11.7",
+		"@happy-dom/global-registrator": "^16.2.6",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
 		"@types/adm-zip": "^0.5.7",
 		"@types/electron-json-storage": "^4.5.4",
 		"@types/fs-extra": "^11.0.4",
@@ -46,19 +50,22 @@
 		"@types/store": "^2.0.5",
 		"@types/xml2js": "^0.4.14",
 		"electron": "^33.2.1",
-		"rimraf": "^6.0.1",
+		"semantic-release": "^24.2.0",
 		"typescript": "^5.7.2",
-		"vite": "^6.0.3",
-		"vite-plugin-dts": "^4.3.0"
+		"vite": "6.0.5",
+		"vite-plugin-dts": "^4.4.0"
 	},
 	"scripts": {
 		"build": "bun src/build.ts",
-		"watch": "bun src/build.ts --watch",
+		"watch": "bun --watch src/build.ts --watch",
 		"watch_web": "bun --watch src/build.ts --watch --web",
-		"update": "bun update && npm run watch && ncu -g",
+		"watch_app": "bun --watch src/build.ts --watch --app",
+		"update": "bun update && bun watch && ncu -g",
 		"test": "bun test",
+		"testw": "bun test --watch",
 		"docs": "vite docs/ --open /tag.html",
-		"rebuild": "rimraf package-lock.json && rimraf node_modules && bun pm cache rm && bun watch"
+		"rebuild": "bun pm cache rm && bun watch",
+		"semantic-release": "semantic-release"
 	},
 	"keywords": [
 		"novelgame",
@@ -70,6 +77,19 @@
 	"repository": {
 		"type": "git",
 		"url": "git+ssh://git@github.com/famibee/SKYNovel-2pixi8.git"
+	},
+	"release": {
+		"plugins": [
+			"@semantic-release/commit-analyzer",
+			"@semantic-release/release-notes-generator",
+			"@semantic-release/changelog",
+			"@semantic-release/npm",
+			"@semantic-release/github",
+			"@semantic-release/git"
+		]
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com/"
 	},
 	"bugs": {
 		"url": "https://github.com/famibee/SKYNovel-2pixi8/issues",

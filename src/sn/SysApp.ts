@@ -7,31 +7,26 @@
 
 import {SysNode} from './SysNode';
 import {CmnLib, getDateStr, argChk_Boolean, argChk_Num, uint} from './CmnLib';
-import {IHTag, ITag} from './Grammar';
-import {IVariable, IData4Vari, IMain, HPlugin, HSysBaseArg} from './CmnInterface';
+import type {IHTag, ITag} from './Grammar';
+import type {IVariable, IData4Vari, IMain, T_SysBaseParams, T_SysBaseLoadedParams} from './CmnInterface';
 import {Main} from './Main';
 import {DebugMng} from './DebugMng';
 
 import {Application, Assets} from 'pixi.js';
-import {HINFO, HPROC, SAVE_WIN_INF} from '../preload';
-import {IpcRendererEvent, MessageBoxOptions} from 'electron/renderer';
+import type {HINFO, HPROC, SAVE_WIN_INF} from '../preload';
+import type {IpcRendererEvent, MessageBoxOptions} from 'electron/renderer';
 const to_app: HPROC = (window as any).to_app;
 //const {to_app} = window;
 
 
 export class SysApp extends SysNode {
-	constructor(hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}) {
+	constructor(...[hPlg = {}, arg = {cur: 'prj/', crypto: false, dip: ''}]: T_SysBaseParams) {	// DOMContentLoaded は呼び出し側でやる
 		super(hPlg, arg);
 
-		// queueMicrotask(async ()=> {
-		globalThis.addEventListener('DOMContentLoaded', async ()=> {
-			await Assets.init({basePath: process.cwd()});
-				// SysNode に置くとテストで【already init()】が出てしまう
-
-			await this.loaded(hPlg, arg);
-		}, {once: true, passive: true});
+		queueMicrotask(async ()=> this.loaded(hPlg, arg));
 	}
-	protected override async loaded(hPlg: HPlugin, arg: HSysBaseArg) {
+	protected override async loaded(...[hPlg, arg]: T_SysBaseLoadedParams) {
+		await Assets.init({basePath: process.cwd()});
 		await super.loaded(hPlg, arg);
 
 		this.#hInfo = await to_app.getInfo();
@@ -136,13 +131,7 @@ export class SysApp extends SysNode {
 
 	#main: Main;
 	protected override async run() {
-		if (this.#main) {
-			const ms_late = 10;	// NOTE: リソース解放待ち用・魔法数字
-			this.#main.destroy();
-			await new Promise(rs=> setTimeout(rs, ms_late));
-				// clearTimeout()不要と判断
-		}
-
+		if (this.#main) this.#main.destroy();
 		this.#main = new Main(this);
 	}
 
@@ -163,7 +152,7 @@ export class SysApp extends SysNode {
 	override cvsResize() {
 		super.cvsResize();
 
-		const cvs = Main.cvs;
+		const cvs = this.main.cvs;
 		const ps = cvs.parentElement!.style;
 		const s = cvs.style;
 		if (this.isFullScr) {
@@ -205,7 +194,7 @@ export class SysApp extends SysNode {
 	protected override readonly	_export = ()=> {
 		to_app.zip(
 			this.$path_userdata +'storage/',
-			this.$path_downloads + (this.crypto ?'' :'no_crypto_')
+			this.$path_downloads + (this.arg.crypto ?'' :'no_crypto_')
 			+ this.cfg.getNs() + getDateStr('-', '_', '') +'.spd',
 		);
 		if (CmnLib.debugLog) console.log('プレイデータをエクスポートしました');

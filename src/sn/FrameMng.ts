@@ -5,14 +5,13 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {CmnLib, IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
+import {CmnLib, type IEvtMng, argChk_Boolean, argChk_Num} from './CmnLib';
 import {CmnTween} from './CmnTween';
-import {IHTag, HArg} from './Grammar';
-import {IVariable, IMain, IGetFrm} from './CmnInterface';
-import {SysBase} from './SysBase';
+import type {IHTag, HArg} from './Grammar';
+import type {IVariable, IMain, IGetFrm} from './CmnInterface';
+import type {SysBase} from './SysBase';
 import {Config} from './Config';
 import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
-import {Main} from './Main';
 import {disableEvent, enableEvent} from './ReadState';
 
 import {Application, Assets, Renderer, Texture} from 'pixi.js';
@@ -21,9 +20,11 @@ import {Application, Assets, Renderer, Texture} from 'pixi.js';
 export class FrameMng implements IGetFrm {
 	static	#cfg	: Config;
 	static	#sys	: SysBase;
-	static	init(cfg: Config, sys: SysBase, _main: IMain): void {
+	static	#main	: IMain;
+	static	init(cfg: Config, sys: SysBase, main: IMain): void {
 		FrameMng.#cfg = cfg;
 		FrameMng.#sys = sys;
+		FrameMng.#main = main;
 	}
 
 	constructor(hTag: IHTag, private readonly appPixi: Application, private readonly val: IVariable) {
@@ -74,7 +75,7 @@ export class FrameMng implements IGetFrm {
 		const b_color = hArg.b_color ?` background-color: ${hArg.b_color};` :'';
 		const rct = this.#rect(hArg);
 		// 【sandbox="allow-scripts allow-same-origin"】は必要なのに警告が出るので削除
-		Main.cvs.insertAdjacentHTML('beforebegin', `<iframe id="${id}" style="opacity: ${a}; ${b_color} position: absolute; left:${
+		FrameMng.#main.cvs.insertAdjacentHTML('beforebegin', `<iframe id="${id}" style="opacity: ${a}; ${b_color} position: absolute; left:${
 			FrameMng.#sys.ofsLeft4elm +rct.x *FrameMng.#sys.cvsScale
 		}px; top: ${
 			FrameMng.#sys.ofsTop4elm +rct.y *FrameMng.#sys.cvsScale
