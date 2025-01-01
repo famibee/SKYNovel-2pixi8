@@ -5,9 +5,9 @@
 	http://opensource.org/licenses/mit-license.php
 ** ***** END LICENSE BLOCK ***** */
 
-import {Texture, EventEmitter} from 'pixi.js';
+import {type Container, EventEmitter} from 'pixi.js';
 
-type IEmitter = Texture | EventEmitter | {
+type IEmitter = EventEmitter | {
 	addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
 	removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
 }
@@ -15,20 +15,11 @@ type IEmitter = Texture | EventEmitter | {
 export class EventListenerCtn {	// リソースリーク対策
 	#aOffEvt	: {(): void}[]	= [];
 
+	addC(ed: Container, type: string, fnc: (e: any)=> void, ctx: any = {}): void {
+		ed.on(type, fnc, ctx);
+		this.#aOffEvt.push(()=> ed.off(type, fnc, ctx));
+	}
 	add(ed: IEmitter, type: string, fnc: (e: any)=> void, ctx: any = {}): void {
-		if (ed instanceof Texture) {
-			switch (type) {
-		//	case 'loaded':
-			case 'update':
-			case 'destroy':
-		//	case 'error':
-		//	case 'dispose':
-				ed.on(type, fnc, ctx);
-				this.#aOffEvt.push(()=> ed.off(type, fnc, ctx));
-				break;
-			}
-			return;
-		}
 		if (ed instanceof EventEmitter) {
 			ed.on(type, fnc, ctx);
 			this.#aOffEvt.push(()=> ed.off(type, fnc, ctx));

@@ -11,7 +11,7 @@ const web = aCmd.includes('--web') ?{} :null;
 const app = aCmd.includes('--app') ?{} :null;
 
 import {build} from 'vite';
-import dts, {PluginOptions} from 'vite-plugin-dts';
+import dts, {type PluginOptions} from 'vite-plugin-dts';
 import {builtinModules} from 'node:module';
 
 const output = { // entry chunk assets それぞれの書き出し名の指定
@@ -77,7 +77,7 @@ build({
 		lib: {
 			entry	: './src/appMain',
 			fileName: _=> 'appMain.js',
-			formats	: ['es'],
+			formats	: ['cjs'],
 		},
 		sourcemap	: true,
 		emptyOutDir	: false,
@@ -102,7 +102,7 @@ build({
 		lib: {
 			entry	: './src/preload',
 			fileName: _=> 'preload.js',
-			formats	: ['es'],
+			formats	: ['cjs'],
 		},
 		sourcemap	: true,
 		emptyOutDir	: false,
