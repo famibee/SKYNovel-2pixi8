@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-	Copyright (c) 2018-2024 Famibee (famibee.blog38.fc2.com)
+	Copyright (c) 2018-2025 Famibee (famibee.blog38.fc2.com)
 
 	This software is released under the MIT License.
 	http://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@ import {SpritesMng} from './SpritesMng';
 import {TxtLayer} from './TxtLayer';
 import {RubySpliter} from './RubySpliter';
 import {TxtStage} from './TxtStage';
-import type {Config} from './Config';
+import {PROTOCOL_DL, PROTOCOL_USERDATA, type Config} from './Config';
 import type {ScriptIterator} from './ScriptIterator';
 import type {SysBase} from './SysBase';
 import {FrameMng} from './FrameMng';
@@ -26,7 +26,7 @@ import {DesignCast} from './DesignCast';
 import {EventListenerCtn} from './EventListenerCtn';
 import {disableEvent, enableEvent} from './ReadState';
 
-import {Application, Color, Container, Filter, GlProgram, GpuProgram, Graphics, RenderTexture, Sprite, Texture, autoDetectRenderer} from 'pixi.js';
+import {Container, Application, Graphics, Color, Filter, GlProgram, GpuProgram, RenderTexture, Sprite, autoDetectRenderer, Texture} from 'pixi.js';
 
 export interface IMakeDesignCast { (idc	: DesignCast): void; };
 
@@ -333,10 +333,10 @@ export class LayerMng implements IGetFrm, IRecorder {
 	//MARK: スナップショット
 	#snapshot(hArg: HArg) {
 		const fn0 = hArg.fn
-		? hArg.fn.startsWith('userdata:/')
+		? hArg.fn.startsWith(PROTOCOL_USERDATA)
 			? hArg.fn
-			: `downloads:/${hArg.fn + getDateStr('-', '_', '', '_')}.png`
-		: `downloads:/snapshot${getDateStr('-', '_', '', '_')}.png`;
+			: `${PROTOCOL_DL + hArg.fn + getDateStr('-', '_', '', '_')}.png`
+		: `${PROTOCOL_DL}snapshot${getDateStr('-', '_', '', '_')}.png`;
 		const url = this.cfg.searchPath(fn0);
 		const width = argChk_Num(hArg, 'width', CmnLib.stageW);
 		const height= argChk_Num(hArg, 'height', CmnLib.stageH);

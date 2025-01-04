@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-	Copyright (c) 2018-2024 Famibee (famibee.blog38.fc2.com)
+	Copyright (c) 2018-2025 Famibee (famibee.blog38.fc2.com)
 
 	This software is released under the MIT License.
 	http://opensource.org/licenses/mit-license.php
@@ -56,7 +56,6 @@ export class SysApp extends SysNode {
 	override	fetch = (url: string)=> fetch(url, {cache: 'no-store'});
 
 	override	ensureFileSync	= to_app.ensureFileSync;
-	protected override	readFileSync	= to_app.readFileSync;
 	protected override	writeFileSync	= to_app.writeFileSync;
 	override	appendFile		= to_app.appendFile;
 	override	outputFile		= to_app.outputFile;

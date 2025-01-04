@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-	Copyright (c) 2018-2024 Famibee (famibee.blog38.fc2.com)
+	Copyright (c) 2018-2025 Famibee (famibee.blog38.fc2.com)
 
 	This software is released under the MIT License.
 	http://opensource.org/licenses/mit-license.php
@@ -137,9 +137,6 @@ ${'^'.padStart(Number(col))}` :``}`;
 const REG_FN	= /^[^\/\.]+$|[^\/]+(?=\.)/;
 	// https://regex101.com/r/8sltIm/1
 export	function getFn(p: string) {return (p.match(REG_FN) ?? [''])[0]}
-const REG_EXT	= /\.([^\.]+)$/;
-	// https://regex101.com/r/IULqII/3
-export 	function getExt(p: string) {return (p.match(REG_EXT) ?? ['',''])[1]}
 
 import {name, os} from 'platform';
 //import {isMobile} from 'pixi.js';		// 使い物にならないことを確認済み

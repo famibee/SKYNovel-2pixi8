@@ -1,0 +1,15 @@
+import { IEvtMng } from './CmnLib';
+import { IHTag } from './Grammar';
+import { IVariable, IMain, INoticeChgVolume } from './CmnInterface';
+import { Config } from './Config';
+export declare class SoundMng {
+    #private;
+    private readonly val;
+    constructor(cfg: Config, hTag: IHTag, val: IVariable, main: IMain);
+    setEvtMng(evtMng: IEvtMng): void;
+    setNoticeChgVolume(setGlbVol: INoticeChgVolume, setMovVol: INoticeChgVolume): void;
+    clearCache(): void;
+    playLoopFromSaveObj(all_stop_and_play: boolean): Promise<void>[];
+    destroy(): void;
+}
+//# sourceMappingURL=SoundMng.d.ts.map

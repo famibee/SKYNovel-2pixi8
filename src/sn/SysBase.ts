@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-	Copyright (c) 2018-2024 Famibee (famibee.blog38.fc2.com)
+	Copyright (c) 2018-2025 Famibee (famibee.blog38.fc2.com)
 
 	This software is released under the MIT License.
 	http://opensource.org/licenses/mit-license.php
@@ -9,9 +9,11 @@ import type {IHTag, ITag} from './Grammar';
 import type {IVariable, ISysBase, IData4Vari, ILayerFactory, IMain, IFire, IFncHook, PLUGIN_DECAB_RET, T_PLUGIN_INFO, T_SysBaseLoadedParams, HPlugin, HSysBaseArg} from './CmnInterface';
 import {argChk_Boolean, CmnLib, getFn} from './CmnLib';
 import {EventListenerCtn} from './EventListenerCtn';
-import {type IConfig, type IFn2Path, type ISysRoots, SEARCH_PATH_ARG_EXT} from './ConfigBase';
+import type {IConfig, IFn2Path, ISysRoots} from './ConfigBase';
+import {SEARCH_PATH_ARG_EXT} from './ConfigBase';
 
-import {Application, Container, extensions, ExtensionType, LoaderParserPriority, RenderTexture, Texture} from 'pixi.js';
+import type {Application, Container, RenderTexture} from 'pixi.js';
+import {extensions, ExtensionType, LoaderParserPriority, Texture} from 'pixi.js';
 import {io, Socket} from 'socket.io-client';
 
 

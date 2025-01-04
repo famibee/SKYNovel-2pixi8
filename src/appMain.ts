@@ -1,5 +1,5 @@
 /* ***** BEGIN LICENSE BLOCK *****
-	Copyright (c) 2021-2024 Famibee (famibee.blog38.fc2.com)
+	Copyright (c) 2021-2025 Famibee (famibee.blog38.fc2.com)
 
 	This software is released under the MIT License.
 	http://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@ import {CmnLib} from "./sn/CmnLib";
 
 import {screen, app, BrowserWindow, ipcMain as ipc, shell, dialog, type MessageBoxOptions, Size} from 'electron';
 	// ギャラリーでエラーになる【error TS2503: Cannot find namespace 'Electron'.】ので const ではなく import の形に
-import {existsSync, copySync, removeSync, ensureDirSync, readFileSync, writeFileSync, appendFile, ensureFileSync, outputFile, WriteFileOptions} from 'fs-extra';
+import {existsSync, copySync, removeSync, ensureDirSync, writeFileSync, appendFile, ensureFileSync, outputFile, WriteFileOptions} from 'fs-extra';
 import Store from 'electron-store';
 import AdmZip from 'adm-zip';
 
@@ -23,10 +23,6 @@ export class appMain {
 		let opLocalDevTools = ()=> {};
 		try {
 			Store.initRenderer();
-
-			process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
-			// 2018/05/08
-			// disable security-warnings not working · Issue #11970 · electron/electron https://github.com/electron/electron/issues/11970
 
 			bw = new BrowserWindow({
 			//	...o,
@@ -87,7 +83,6 @@ export class appMain {
 		ipc.handle('copySync', (_, path_from: string, path_to: string)=> copySync(path_from, path_to));
 		ipc.handle('removeSync', (_, fn: string)=> removeSync(fn));
 		ipc.handle('ensureFileSync', (_, fn: string)=> ensureFileSync(fn));
-		ipc.handle('readFileSync', (_, path: string)=> readFileSync(path, {encoding: 'utf8'}));
 		ipc.handle('writeFileSync', (_, path: string, data: string | NodeJS.ArrayBufferView, o?: WriteFileOptions)=> writeFileSync(path, data, o));
 		ipc.handle('appendFile', (_, path: string, data: string | Uint8Array)=> appendFile(path, data).catch(err=> console.log(err)));
 		ipc.handle('outputFile', (_, path: string, data: string | NodeJS.ArrayBufferView)=> outputFile(path, data).catch(err=> console.log(err)));
